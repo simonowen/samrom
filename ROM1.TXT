@@ -7018,7 +7018,7 @@ SCRLSCR2:  LD A,(DEVICE)
 
            LD HL,SCRCT
            DEC (HL)
-           JR NZ,DOSCRL      ;JR IF NOT TIME FOR PROMPP YET
+           JR NZ,DOSCTL      ;JR IF NOT TIME FOR PROMPP YET
 
            CALL SETSCRCT
            CALL SVTEMPS      ;SAVE TEMPORARY ATTRIBUTES ETC
@@ -7521,7 +7521,10 @@ LVM2:      DEC A
 CDSCVE:    CALL RDRLEN       ;CDE='DESIRED' LEN FROM HDR
            LD B,C
            PUSH BC
-           PED LEN VALUE, CDE=ACTUAL LEN OR FFFFFF
+           PUSH DE
+           CALL RDLLEN       ; CDE=ACTUAL LEN OR FFFFFF
+           POP HL
+           POP AF
            INC A
            JR Z,HDLNM        ;JR IF DESIRED LEN UNSPECIFIED (ONLY IF CODE)
 
@@ -11829,30 +11832,7 @@ CAR        EQU 31
 ;"IMMEDIATE" FUNCTIONS
 
 KEYWTAB:      DB 0A0H
-              DC "-"             ;21H
-              DC "-"             ;
-              DC "-"             ;
-              DC "-"             ;
-              DC "COS"           ;
-              DC "TAN"           ;
-              DC "ASN"           ;
-              DC "ACS"           ;
-              DC "ATN"           ;
-              DC "LN"            ;
-              DC "EXP"           ;
-              DC "ABS"           ;
-              DC "SGN"           ;
-              DC "SQR"           ;
-              DC "INT"           ;
-              DC "USR"           ;
-              DC "IN"            ;
-              DC "PEEK"          ;
-              DC "DPEEK"         ;
-              DC "DVAR"          ;
-              DC "SVAR"          ;
-              DC "BUTTON"        ;
-              DC "EOF"           ;
- DC "PI"            ;3BH
+IMFNTL:       DC "PI"            ;3BH
               DC "RND"           ;
               DC "POINT"         ;
               DC "FREE"          ;
@@ -11901,9 +11881,9 @@ FPCFNTL:      DC "SIN"           ;53H
               DC "BUTTON"        ;
               DC "EOF"           ;
               DC "PTR"           ;   DISC USE?
-              DC "XVAR"          ; RESERVED
+              DC "-"             ; RESERVED
               DC "UDG"           ;
-              DC "NVAL"          ; NUMBER
+              DC "-"             ;
               DC "LEN"           ;
               DC "CODE"          ;
               DC "VAL$"          ;
@@ -11925,7 +11905,7 @@ FPCFNTL:      DC "SIN"           ;53H
 BINFNTL:      DC "MOD"           ;7AH
               DC "DIV"           ;
               DC "BOR"           ;
-              DC "BXOR"          ;BXOR
+              DC "-"             ;
               DC "BAND"          ;
               DC "OR"            ;
               DC "AND"           ;
@@ -12062,13 +12042,13 @@ BTWD:         DC "BOOT"              ;E9 USED BY BOOT TO CHECK FILE NAME
               DC "POW"               ;F4
               DC "BOOM"              ;F5
               DC "ZOOM"              ;F6
-              DC "BACKUP"            ;F7
-              DC "TIME"              ;F8
-              DC "DATE"              ;F9
-              DC "ALTER"             ;FA
-              DC "SORT"              ;FB
-              DC "JOIN"              ;FC
-              DC "EDIT"              ;FD
+              DC "-"                 ;F7
+              DC "-"                 ;F8
+              DC "-"                 ;F9
+              DC "-"                 ;FA
+              DC "-"                 ;FB
+              DC "-"                 ;FC
+              DC "-"                 ;FD
               DC "-"                 ;FE
               DC "INK"               ;FF (FUNCTION PREFIX) AND TEMP "INK" TOKEN
 
@@ -12380,7 +12360,7 @@ SUBTAB:    DW -10000
            DW -1000
            DW -100
            DW -10
-           DB  0  CHARSRC 1ST BYTE IS TERMINATOR!
+;          DB  0  CHARSRC 1ST BYTE IS TERMINATOR!
 
 ;CHARSET BY SIMON N. GOODWIN
 ;CHARACTERS USE CENTRE 6 PIXELS, CAN BE UP TO 8 PIXELS HIGH
