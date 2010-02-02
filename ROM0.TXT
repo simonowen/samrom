@@ -3690,8 +3690,8 @@ ERRHAND1:  CP 50H
 ;MGT MESSAGE GIVEN IF "REPORT" 50H
 
            XOR A
-           CALL UTMSG        ;"  MILES GORDON TECHNOLOGY plc"
-                             ;"    C 1989  SAM Coup"
+           CALL UTMSG        ;"  MILES GORDON TECHNOLOGY PLC"
+                             ;"    C 1990  SAM Coup"
            LD HL,BGFLG
            LD A,82H          ; e WITH AN ACCENT
            LD (HL),A         ;NZ=FOREIGN ON

@@ -11611,7 +11611,7 @@ PRNTNO2:   ADD A,E
 ;UMVAL IS LOADED INTO UMSGS SYS VAR AT INIT.
 UMVAL:
 
-  DB "   MILES GORDON TECHNOLOGY plc  "
+  DB "   MILES GORDON TECHNOLOGY PLC  "
   DB "     ",127," 1990  SAM Cou","p"+80H        ;0
   DB "scroll","?"+80H                            ;1
   DC " "                                 ;2 NOT USED
