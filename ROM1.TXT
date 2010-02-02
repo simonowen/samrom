@@ -1,4 +1,4 @@
-           ORG 0C000H
+           ORG &C000
 ;MISCX1.SAM - START OF UPPER ROM. FIRST PART IS SECTIONS THAT ARE COPIED
 ;TO A RAM BUFFER FOR EXECUTION SO THE UPPER ROM CAN BE PAGED OUT AND
 ;THE BASIC PROGRAM GOT AT.
@@ -11,7 +11,7 @@ RNMP2:     LD HL,10
            LD   (RLINE),HL
            LD   (RSTEP),HL
            CALL BRKLSSL      ;ASSESS <N> TO <M>
-           RST  18H
+           RST  &18
            LD   HL,RLINE
            CP   LINETOK
            CALL Z,REVAL
@@ -31,7 +31,7 @@ MAKETABLE: LD   HL,(RLINE)
            EXX
            LD   HL,SBO
            PUSH HL
-           LD   DE,0000H
+           LD   DE,&0000
 
 MKTBLP:    POP  HL           ;SBO
            LD   (HL),D
@@ -73,7 +73,7 @@ MKTBLP:    POP  HL           ;SBO
            INC  A
            JR   NZ,MKTBLP    ;LOOP UNLESS LINE NUMBERS TOO HIGH (>FEFF)
 
-NRFLERR:   RST 08H
+NRFLERR:   RST &08
            DB 33             ;'No room for line'
 
 RENUM3:    POP BC
@@ -138,7 +138,7 @@ CHGLL:     LD   B,(HL)
 
 REN5:      LD HL,EPPC
            CALL TRANSHL
-           LD L,>SDTOP
+           LD L,SDTOP\256
            CALL TRANSHL
            CALL MCLS         ;CLEAR ENTIRE SCREEN
            JP GT4P           ;UNSTACK STAT, PPC, SET UP FOR GOTO NEXT, COMP
@@ -188,29 +188,29 @@ RLOOP:     LD   A,(IX+0)
            CP "$"
            JR Z,CHGRY        ;RENUM E.G. SAVE ASD$ LINE 10
 
-           CP 22H
+           CP &22
            JR NZ,RLOOP       ;NO RENUM UNLESS E.G. SAVE "NAME" LINE 10
 
-CHGRY:     RST  18H
+CHGRY:     RST  &18
 
 CHGR1:     CP   TOTOK
            JR   NZ,CHGR2
 
-           RST  20H
+           RST  &20
 
 CHGR2:     PUSH HL
-           LD   B,0FFH
-           CP   0DEH         ;ONTOK
+           LD   B,&FF
+           CP   &DE          ;ONTOK
            JR   NZ,CHGR5
 
-CHGR3:     RST  20H
+CHGR3:     RST  &20
            CP   ";"
            JR   NZ,CHGR3
 
-           RST  20H
+           RST  &20
            POP  DE
            PUSH HL
-           DB 11H            ;'JR+2'
+           DB &11            ;'JR+2'
 
 CHGR4:     INC HL
            LD A,(HL)
@@ -227,13 +227,13 @@ CHGR6:     LD A,(HL)
            JR Z,CHGR6
 
            PUSH HL
-           CP   0EH
+           CP   &0E
            JR   NZ,NBLKL
 
            CALL HLTOFPCS
            LD   (CHAD),HL
            CALL GETINT
-           RST  18H
+           RST  &18
            CALL COCRCOTO     ;CHECK FOR CR/:/TO/,
            JR NZ,FAILED
 
@@ -307,18 +307,18 @@ CHGR7:     CALL RCRC         ;RST 18, CRCOLON
            CALL COCRCOTO     ;Z IF TO/,
            JP NZ,RLOOP
 
-           RST 20H
+           RST &20
            JP CHGR1
 
-RENTAB:    DB 0CDH           ;DELETETOK
-           DB 0DDH           ;ONERRORTOK
-           DB 08CH           ;LINETOK
-           DB 0BEH           ;LLISTTOK
-           DB 0BDH           ;LISTTOK
-           DB 0BAH           ;RESTORETOK
-           DB 0B4H           ;GOTOTOK
-           DB 0B5H           ;GOSUBTOK
-           DB 0B0H           ;RUNTOK
+RENTAB:    DB &CD            ;DELETETOK
+           DB &DD            ;ONERRORTOK
+           DB &8C            ;LINETOK
+           DB &BE            ;LLISTTOK
+           DB &BD            ;LISTTOK
+           DB &BA            ;RESTORETOK
+           DB &B4            ;GOTOTOK
+           DB &B5            ;GOSUBTOK
+           DB &B0            ;RUNTOK
            DB 0
 
 REVAL:     PUSH HL
@@ -333,7 +333,7 @@ REVAL:     PUSH HL
            LD (HL),C
            INC HL
            LD (HL),B
-           RST 18H
+           RST &18
            RET
 
 TRANSHL:   LD C,(HL)
@@ -387,7 +387,7 @@ TRANS5:    LD   A,H
            LD   C,(HL)
 TRANSF:    JP   RCURP
 
-RENLN      EQU TRANSF+3-RNMP2
+RENLN:     EQU TRANSF+3-RNMP2
 
            ORG INSTBUF
 
@@ -413,35 +413,35 @@ GETP2:     CALL SYNTAX1      ;VALID VARIABLE
 GT2:       CALL NUMERIC
            JR C,GT3          ;JR IF '0' TO '9'
 
-           AND 0DFH          ;FORCE U.C
+           AND &DF           ;FORCE U.C
            SUB 7
 
-GT3:       SUB 30H           ;'0'->0, 'A'->10D ETC.
+GT3:       SUB &30           ;'0'->0, 'A'->10D ETC.
            CALL STACKA
 
 GT4:       CALL NOISE
            JP ASSIGN         ;ASSSIGN STACKED VALUE TO VARIABLE
 
-GETLN      EQU GT4+6-GETP2
+GETLN:     EQU GT4+6-GETP2
 
-           ORG $,INSTBUF
+           ORG INSTBUF
 
 DELPT2:    LD HL,1
            CALL DELSR
-           RST 18H           ;CHAR AFTER 'DELETE'
+           RST &18           ;CHAR AFTER 'DELETE'
            CP TOTOK
            JR Z,DL2
 
            CALL GIR2         ;EVAL NUM, GET TO HL IF RUNNING. SCF IF SYNTAX
            CALL NC,DELSR     ;CALL IF RUNNING
 
-           RST 18H
+           RST &18
            CP TOTOK
            JP NZ,NONSENSE
 
-DL2:       RST 20H           ;SKIP 'TO'
+DL2:       RST &20           ;SKIP 'TO'
            CALL CRCOLON
-           LD HL,0FEFFH      ;LAST LEGAL LINE NUMBER
+           LD HL,&FEFF       ;LAST LEGAL LINE NUMBER
            CALL NZ,GIR2      ;GET LAST LINE NUM
 
            CALL RUNFLG
@@ -479,13 +479,13 @@ DELSR:     CALL FNDLINE      ;DEFAULT LINE IS LINE 1 OR FIRST AFTER IT
            LD (LAST),A
 DELFIN:    JP SELCHADP
 
-DELLN      EQU DELFIN+3-DELPT2
+DELLN:     EQU DELFIN+3-DELPT2
 
            ORG HDR
 
 KEYP2:     CALL SYNTAXA
 
-           LD A,0FEH
+           LD A,&FE
            CALL SBFSR2       ;COPY STRING TO BUFFER. LEN 0-511 OK
            RET Z             ;RET IF LEN Z
 
@@ -532,7 +532,7 @@ KI3:       POP HL            ;OLD ERRSP
 KEYFIN:    JP GT4P           ;SET UP SO GOTO HAPPENS. MEANS LINE CAN BE KEYED
                              ;IN BEFORE LINE BEING EXECUTED.
 
-KEYLN      EQU KEYFIN+3-KEYP2
+KEYLN:     EQU KEYFIN+3-KEYP2
 
            ORG INSTBUF
 
@@ -550,7 +550,7 @@ POP1:      EX AF,AF'         ;Z IF NO VAR
            INC A
            JR NZ,POP2        ;JR IF NOT THE STACK TERMINATOR
 
-           RST 08H
+           RST &08
            DB 11             ;'No POP data'
 
 POP2:      CALL RETLOOP2     ;ACCEPT ANY TYPE OF RET ADDR - DO/GOSUB/PROC
@@ -577,13 +577,13 @@ POP3:      EX DE,HL
            CALL ASSIGN       ;FPCS TO VAR
 
 POP4:      POP AF            ;TYPE/PAGE
-           AND 0E0H
-           CP 40H
+           AND &E0
+           CP &40
            JP Z,DELOCAL    ;IF 'PROC' TYPE, CLEAR LOCAL VARS TOO
 
 POP5:      RET
 
-POPLN      EQU POP5-POPP2+1
+POPLN:     EQU POP5-POPP2+1
 
            ORG INSTBUF
 
@@ -606,7 +606,7 @@ INPP2:     CALL RUNFLG
                              ;SO WE CAN SCROLL THOSE LINES OFF BEFORE 'SCROLL?'
            RET
 
-INPSL:     RST 18H
+INPSL:     RST &18
            CALL PRTERM
            JR Z,IP2CR        ;JR IF CR/COLON/CLOSE BRACK.
 
@@ -625,9 +625,9 @@ IP2CR:     LD A,(DEVICE)
 IPITEM:    CP "("
            JR NZ,INP2        ;JR IF NOT AN EMBEDDED PRINT ITEM
 
-           RST 20H           ;SKIP '('
+           RST &20           ;SKIP '('
            CALL PRINT2       ;HANDLE PRINT ITEM
-           RST 18H
+           RST &18
            JP INSISCBRK      ;CHECK/SKIP ')'
 
 INP2:      CP LINETOK
@@ -666,12 +666,12 @@ INP5:      CALL ABORTER
            LD C,3
 
 INP6:      CALL WKROOM
-           LD (HL),0DH       ;LAST LOCN
+           LD (HL),&0D       ;LAST LOCN
            DEC C
            JR Z,INP7         ;JR IF JUST ONE SPACE
 
            DEC HL
-           LD A,22H
+           LD A,&22
            LD (HL),A         ;SECOND LOCN
            LD (DE),A         ;FIRST LOCN
 
@@ -728,12 +728,12 @@ INPA:      LD HL,FLAGX
            CALL ADDRWK
            LD D,H
            LD E,L            ;DE=START
-           LD BC,0FFFFH
+           LD BC,&FFFF
 
 INPBL:     LD A,(HL)
            INC HL
            INC BC
-           CP 0DH
+           CP &0D
            JR NZ,INPBL       ;COUNT LEN TILL 0D TERMINATOR
 
            CALL STKSTOREP
@@ -759,29 +759,29 @@ INPAS:     LD HL,(WORKSP)
            LD (CHAD),HL
            LD A,(WORKSPP)
            CALL SETCHADP
-           RST 18H
-           CP 0B1H           ;STOPTOK
+           RST &18
+           CP &B1            ;STOPTOK
            JR NZ,INPA2
 
            CALL RUNFLG
            RET NC
 
-           RST 08H
+           RST &08
            DB 17             ;'STOP in INPUT'
 
 INPA2:     LD A,(FLAGX)
            CALL VALFET2
-           RST 18H
-           CP 0DH
+           RST &18
+           CP &0D
            RET Z
 
-           RST 08H
+           RST &08
 INPFIN:    DB 29             ;'NONSENSE'
 
-INPLN      EQU INPFIN+1-INPP2
+INPLN:     EQU INPFIN+1-INPP2
 
                                  ;INPUT
-           INCLUDE TMISCX2.SAM   ;DEF KEYCODE, READ, DEF FN, TOKEN.
+;          INCLUDE TMISCX2.SAM   ;DEF KEYCODE, READ, DEF FN, TOKEN.
 ;MISCX2.SAM
 
            ORG INSTBUF
@@ -857,7 +857,7 @@ DFK55:     POP AF            ;KEY CODE
            POP BC            ;DEF$ LEN
            PUSH AF
            LD A,B
-           CP 0FFH
+           CP &FF
            JR Z,DFK6         ;ABORT IF WAS E.G. DEF KEY 1 (CR). LEN IS FFFFH
 
            OR C              ;ALSO ABORT IF LEN 0
@@ -879,7 +879,7 @@ DFK6:      JP Z,PPRET        ;POP POP RET - JUNK KEY, SRC, ABORT
            JP C,TMDERR       ;ERROR IF TERMINATOR PAST LIMIT
                              ;ALLOWS TERMINATOR TO BE AT LIMIT...
            EX DE,HL
-           LD (HL),0FFH      ;NEW TERMINATOR (OLD WILL BE OVER-WRITTEN)
+           LD (HL),&FF       ;NEW TERMINATOR (OLD WILL BE OVER-WRITTEN)
            POP DE
            DEC DE
            DEC DE
@@ -898,10 +898,10 @@ DFK6:      JP Z,PPRET        ;POP POP RET - JUNK KEY, SRC, ABORT
            LDIR
 DKFIN:     RET
 
-DKLN       EQU DKFIN+1-DKP2
+DKLN:      EQU DKFIN+1-DKP2
 
 
-RDLN       EQU 0   ;RDFIN+3-RDP2
+RDLN:      EQU 0   ;RDFIN+3-RDP2
 
 ;DEF FN COMMAND (OR MARKER - DOES NOTHING EXCEPT CHECK SYNTAX)
 
@@ -910,15 +910,15 @@ RDLN       EQU 0   ;RDFIN+3-RDP2
 DFNP2:     CALL RUNFLG
            JP C,SKIPCSTAT    ;SKIP STATEMENT IF RUNNING
 
-           RST 18H
+           RST &18
            CALL FNNAME
            PUSH AF           ;A=1 IF STRING DEF FN
            LD (CHAD),HL
-           RST 18H
+           RST &18
            CP "("
            JR NZ,DFN5
 
-           RST 20H           ;SKIP '('
+           RST &20           ;SKIP '('
            CP ")"
            JR Z,DFN4
 
@@ -932,14 +932,14 @@ DFNPL:     CALL GETALPH      ;INSIST ON A LETTER
 
 DFN3:      CALL MAKESIX
            LD (CHAD),DE      ;PT TO LAST OF 5-BYTES
-           RST 20H
+           RST &20
            CP ")"
            JR Z,DFN4
 
            CALL INSISCOMA
            JR DFNPL
 
-DFN4:      RST 20H
+DFN4:      RST &20
 
 DFN5:      CP "="
            JR NZ,DFNNS
@@ -954,11 +954,11 @@ DFN5:      CP "="
 DFN6:      DEC B             ;ERROR IF B<>1 (NAME<>STRING TYPE)
            RET Z
 
-DFNNS:     RST 08H
-           DM 29             ;'Syntax error'
+DFNNS:     RST &08
+           DB 29             ;'Syntax error'
 
-DFNLN      EQU DFNNS+2-DFNP2
-           ORG CDBUFF+80H
+DFNLN:     EQU DFNNS+2-DFNP2
+           ORG CDBUFF+&80
 
 TOKPT2:    EXX
            EX DE,HL          ;E-LINE START OR WKSPACE START, OR OTHER,  TO HL
@@ -972,7 +972,7 @@ LOOKNA:    POP HL
            CP "A"
            JR C,TOKQUEN      ;JR IF WE JUST CONSIDERED '>' OR '<'
 
-           DB 0FEH           ;'JR+1'
+           DB &FE            ;'JR+1'
 
 LKNONALP:  INC HL
            LD A,(HL)
@@ -984,11 +984,11 @@ LKNONALP:  INC HL
            JR Z,LKNONALP     ;LOOP WHILE UNDERLINE
 
 TOKQUEN:   LD (CHAD),HL      ;RESET CHAD
-           DB 0FEH           ;'JR+1'
+           DB &FE            ;'JR+1'
 
-TOKMLP:    RST 20H
+TOKMLP:    RST &20
            EX DE,HL
-           CP 0DH
+           CP &0D
            RET Z             ;RET IF END MARKER FOUND
 
            CALL ALPHA
@@ -1001,19 +1001,19 @@ TOKMLP:    RST 20H
            JR Z,POSFIRST     ;COULD BE '>='
 
            INC DE
-           CP 0FFH
+           CP &FF
            JR Z,FNTS         ;JR WITH (DE)=FN LETTER IF FN LDR
 
            DEC DE
-           CP 22H            ;QUOTE
+           CP &22            ;QUOTE
            JR NZ,TOKMLP
 
 QUOTELP:   INC DE
            LD A,(DE)
-           CP 0DH
+           CP &0D
            RET Z
 
-           CP 22H
+           CP &22
            JR NZ,QUOTELP
 
 FNTS:      INC DE
@@ -1047,19 +1047,19 @@ YGOTM:     EX DE,HL          ;ELSE HL=WORD START, DE=PAST END (IN BUFFER)
            ADD HL,DE
            EX DE,HL          ;HL PTS TO START, DE TO PAST END, IN ELINE
 
-           CP 4AH
+           CP &4A
            JR NC,TOK42       ;JR IF IN RANGE OF CMDS
 
-           ADD A,3AH         ;ELSE GET FN CODE 3BH-83H
-           LD (HL),0FFH      ;OVERWRITE FIRST LETTER WITH FN LEADER
+           ADD A,&3A         ;ELSE GET FN CODE 3BH-83H
+           LD (HL),&FF       ;OVERWRITE FIRST LETTER WITH FN LEADER
            INC HL
            JR TOK55
 
-TOK42:     ADD A,3BH         ;CONVERT LIST ENTRY TO TOKEN CODE 85H-
-           CP 0FFH           ;'INK'
+TOK42:     ADD A,&3B         ;CONVERT LIST ENTRY TO TOKEN CODE 85H-
+           CP &FF            ;'INK'
            JR NZ,TOK43
 
-           LD A,0A1H         ;PENTOK - ALLOW 'PEN' TO BE ENTERED AS 'INK'
+           LD A,&A1          ;PENTOK - ALLOW 'PEN' TO BE ENTERED AS 'INK'
 
 TOK43:     DEC HL            ;PT TO BEFORE WORD IN INPUT
            EX AF,AF'         ;SAVE TOKEN
@@ -1087,12 +1087,12 @@ TOK6:      PUSH DE
            LD L,E
            DEC DE
            LD A,(DE)
-           CP 0B7H           ;REMTOK. DON'T TOKENIZE REM STATEMENTS
+           CP &B7            ;REMTOK. DON'T TOKENIZE REM STATEMENTS
            JP NZ,TOKRST      ;KEEP TOKENISING FROM HL ONWARDS
 
 TOKFIN:    RET
 
-TOKLN      EQU TOKFIN+1-TOKPT2
+TOKLN:     EQU TOKFIN+1-TOKPT2
 
            ORG INSTBUF
 
@@ -1100,7 +1100,7 @@ MEPRO2:    CALL SETWORK      ;CLEAR WORKSP IN CASE E.G. MERGE A$+B$
            LD BC,1
            CALL WKROOM       ;OPEN 1 BYTE IN WORKROOM (NOTE: ENSURES WKEND MOVED
                              ;BY MKRBIG)
-           LD (HL),0FFH      ;TERMINATOR
+           LD (HL),&FF       ;TERMINATOR
            PUSH HL
            CALL RDLLEN       ;CDE=FILE LEN TO LOAD
            POP HL
@@ -1120,7 +1120,7 @@ MEPRO2:    CALL SETWORK      ;CLEAR WORKSP IN CASE E.G. MERGE A$+B$
            CALL RDTHREE      ;CDE=LEN OF PROG ALONE
            PUSH BC
            PUSH DE
-           LD L,>(HDL+22)
+           LD L,(HDL+22)\256
            CALL RDTHREE      ;CDE=LEN OF PROG+NVARS+GAP
            LD A,C
            EX DE,HL          ;AHL=DITTO
@@ -1145,7 +1145,7 @@ MSTAR:     CALL ADDRWK       ;PT TO SRC (TLBYTE OR VAR, OR FF)
            JP Z,GT4R         ;END IF ALL DONE - TERMINATOR HIT
 
            LD DE,TLBYTE
-           AND 0FH
+           AND &0F
            LD C,A
            LD B,0
            LD A,(HL)
@@ -1256,14 +1256,14 @@ MNUMSR:    PUSH HL           ;SRC PTRS LIST POSN
 MNSRL:     DEC D
            ADD HL,DE
            LD A,(HL)
-           AND 0A0H          ;MASK ALL EXCEPT 'HIDDEN' AND 'UNUSED' BITS
+           AND &A0           ;MASK ALL EXCEPT 'HIDDEN' AND 'UNUSED' BITS
            JR NZ,MNSR3       ;DO NOT DEAL WITH SUCH VARS
 
            IN A,(251)
            PUSH AF
            PUSH HL
            LD A,(HL)
-           AND 1FH
+           AND &1F
            LD C,A
            LD A,(HL)
            RES 6,A           ;'NOT A FOR-TYPE VARIABLE'**
@@ -1294,13 +1294,13 @@ MNSR3:     INC HL
            POP HL            ;LIST POSN
 MEEND:     RET
 
-MELN      EQU MEEND+1-MEPRO2
+MELN:     EQU MEEND+1-MEPRO2
 
- ORG 0C000H+RENLN+GETLN+DELLN+KEYLN+POPLN+INPLN+DKLN+RDLN+DFNLN+TOKLN+MELN
+ ORG &C000+RENLN+GETLN+DELLN+KEYLN+POPLN+INPLN+DKLN+RDLN+DFNLN+TOKLN+MELN
 
                                  ;MERGE, EOF, PTR, PATH$, FN STUBS, LINK
 
-           INCLUDE FPCMAIN.SAM    ;CALCVARS, FPCMAIN
+;          INCLUDE FPCMAIN.SAM    ;CALCVARS, FPCMAIN
 ;FPCMAIN.SAM
 ;FLOATING POINT CALCULATOR CODES AND ADDRESSES
 
@@ -1323,17 +1323,17 @@ FPATAB:       DW FPMULT     ;00 MULT
 
               DW FPOR       ;0D OR
 
-MULT       EQU 00H
-ADDN       EQU 01H
-CONCAT     EQU 02H
-SUBN       EQU 03H
-POWER      EQU 04H
-DIVN       EQU 05H
-SWOP       EQU 06H
-DROP       EQU 07H
-MOD        EQU 08H
-IDIV       EQU 09H
-NUOR       EQU 0DH
+MULT:      EQU &00
+ADDN:      EQU &01
+CONCAT:    EQU &02
+SUBN:      EQU &03
+POWER:     EQU &04
+DIVN:      EQU &05
+SWOP:      EQU &06
+DROP:      EQU &07
+MOD:       EQU &08
+IDIV:      EQU &09
+NUOR:      EQU &0D
 
               DW FPAND      ;0E N AND N
               DW FPNNOTE    ;0F N<>N
@@ -1358,26 +1358,26 @@ NUOR       EQU 0DH
               DW FPJPTR     ;1E JPTRUE
               DW FPJPFL     ;1F JPFALSE
 
-NUAND      EQU 0EH
-NNOTE      EQU 0FH
-NLESE      EQU 10H
-NGRTE      EQU 11H
-NLESS      EQU 12H
-NEQUAL     EQU 13H
-NGRTR      EQU 14H
+NUAND:     EQU &0E
+NNOTE:     EQU &0F
+NLESE:     EQU &10
+NGRTE:     EQU &11
+NLESS:     EQU &12
+NEQUAL:    EQU &13
+NGRTR:     EQU &14
 
-SAND       EQU 15H
-SNOTE      EQU 16H
-SLESE      EQU 17H
-SGRTE      EQU 18H
-SLESS      EQU 19H
-SEQUAL     EQU 1AH
-SGRTR      EQU 1BH
+SAND:      EQU &15
+SNOTE:     EQU &16
+SLESE:     EQU &17
+SGRTE:     EQU &18
+SLESS:     EQU &19
+SEQUAL:    EQU &1A
+SGRTR:     EQU &1B
 
-SWOP13     EQU 1CH
-SWOP23     EQU 1DH
-JPTRUE     EQU 1EH
-JPFALSE    EQU 1FH
+SWOP13:    EQU &1C
+SWOP23:    EQU &1D
+JPTRUE:    EQU &1E
+JPFALSE:   EQU &1F
 
 ;UNARY INTERNAL OPERATIONS
 
@@ -1407,27 +1407,27 @@ JPFALSE    EQU 1FH
               DW FPEXIT2    ;37 SPARE
               DW FPEXIT2    ;38 SPARE
 
-JUMP       EQU 20H
-LDBREG     EQU 21H
-DECB       EQU 22H
-STKBREG    EQU 23H
-USEB       EQU 24H
-DUP        EQU 25H
-ONELIT     EQU 26H
-FIVELIT    EQU 27H
-SOMELIT    EQU 28H
-LKADDRB    EQU 29H
-LKADDRW    EQU 2AH
-REDARG     EQU 2BH
-LESS0      EQU 2CH
-LESE0      EQU 2DH
-GRTR0      EQU 2EH
-GRTE0      EQU 2FH
-TRUNC      EQU 30H
-RESTACK    EQU 31H
-POWR2      EQU 32H
-EXIT       EQU 33H
-EXIT2      EQU 34H
+JUMP:      EQU &20
+LDBREG:    EQU &21
+DECB:      EQU &22
+STKBREG:   EQU &23
+USEB:      EQU &24
+DUP:       EQU &25
+ONELIT:    EQU &26
+FIVELIT:   EQU &27
+SOMELIT:   EQU &28
+LKADDRB:   EQU &29
+LKADDRW:   EQU &2A
+REDARG:    EQU &2B
+LESS0:     EQU &2C
+LESE0:     EQU &2D
+GRTR0:     EQU &2E
+GRTE0:     EQU &2F
+TRUNC:     EQU &30
+RESTACK:   EQU &31
+POWR2:     EQU &32
+EXIT:      EQU &33
+EXIT2:     EQU &34
 
 
 ;OPERATIONS USED BY BASIC.
@@ -1443,14 +1443,14 @@ EXIT2      EQU 34H
               DW FPLOGN     ;3F LOGN
               DW FPEXP      ;40 EXP
 
-SIN        EQU 39H
-COS        EQU 3AH
-TAN        EQU 3BH
-ASN        EQU 3CH
-ACS        EQU 3DH
-ATN        EQU 3EH
-LOGN       EQU 3FH
-EXP        EQU 40H
+SIN:       EQU &39
+COS:       EQU &3A
+TAN:       EQU &3B
+ASN:       EQU &3C
+ACS:       EQU &3D
+ATN:       EQU &3E
+LOGN:      EQU &3F
+EXP:       EQU &40
 
               DW FPABS      ;41 ABS
               DW FPSGN      ;42 SGN
@@ -1468,13 +1468,13 @@ EXP        EQU 40H
               DW FPPTR      ;4D PTR - DISC USE
               DW NONSENSE   ;4E UNUSED
 
-ABS        EQU 41H
-SGN        EQU 42H
-SQR        EQU 43H
-INT        EQU 44H
-INP        EQU 46H
-PEEK       EQU 47H
-EOF        EQU 4CH
+ABS:       EQU &41
+SGN:       EQU &42
+SQR:       EQU &43
+INT:       EQU &44
+INP:       EQU &46
+PEEK:      EQU &47
+EOF:       EQU &4C
 
 ;PRIORITY 15, STRING ARG, NUMERIC RESULT
 
@@ -1495,11 +1495,11 @@ EOF        EQU 4CH
 
               DW FPTRUSTR   ;55 TRUNC$
 
-UDGA       EQU 4FH
-LEN        EQU 51H
-CODE       EQU 52H
-VALS       EQU 53H
-VAL        EQU 54H
+UDGA:      EQU &4F
+LEN:       EQU &51
+CODE:      EQU &52
+VALS:      EQU &53
+VAL:       EQU &54
 
 ;PRIORITY 16, NUMERIC ARG, STRING RESULT
 
@@ -1510,46 +1510,46 @@ VAL        EQU 54H
               DW FPUSRS     ;5A USR$
               DW FPINKEY    ;5B INKEY$
 
-CHRS       EQU 56H
-STRS       EQU 57H
-INKEY      EQU 5BH
+CHRS:      EQU &56
+STRS:      EQU &57
+INKEY:     EQU &5B
 
 ;ODD PRIORITY, N ARG, N RESULT
 
               DW FPNOT      ;5C NOT     PRIORITY 4
               DW FPNEGAT    ;5D NEGATE  PRIORITY 9
 
-NOT        EQU 5CH
-NEGATE     EQU 5DH
+NOT:       EQU &5C
+NEGATE:    EQU &5D
 
-CALC       EQU 0EFH
-STOD0      EQU 0C8H
-STOD1      EQU 0C9H
-STOD2      EQU 0CAH
-STOD3      EQU 0CBH
-STOD4      EQU 0CCH  ;USED BY DRCURVE
+CALC:      EQU &EF
+STOD0:     EQU &C8
+STOD1:     EQU &C9
+STOD2:     EQU &CA
+STOD3:     EQU &CB
+STOD4:     EQU &CC   ;USED BY DRCURVE
 
-STO0       EQU 0D0H
-STO1       EQU 0D1H
-STO2       EQU 0D2H
-STO3       EQU 0D3H
-STO4       EQU 0D4H  ;USED BY DRCURVE
-STO5       EQU 0D5H  ;USED BY DRCURVE
+STO0:      EQU &D0
+STO1:      EQU &D1
+STO2:      EQU &D2
+STO3:      EQU &D3
+STO4:      EQU &D4   ;USED BY DRCURVE
+STO5:      EQU &D5   ;USED BY DRCURVE
 
-RCL0       EQU 0D8H
-RCL1       EQU 0D9H
-RCL2       EQU 0DAH
-RCL3       EQU 0DBH
-RCL4       EQU 0DCH  ;USED BY DRCURVE
-RCL5       EQU 0DDH  ;USED BY DRCURVE
+RCL0:      EQU &D8
+RCL1:      EQU &D9
+RCL2:      EQU &DA
+RCL3:      EQU &DB
+RCL4:      EQU &DC   ;USED BY DRCURVE
+RCL5:      EQU &DD   ;USED BY DRCURVE
 
-STKHALF    EQU 0E0H
-STKZERO    EQU 0E1H
-STK16K     EQU 0E2H
-STKFONE    EQU 0E6H
-STKONE     EQU 0E9H
-STKTEN     EQU 0ECH
-STKHALFPI  EQU 0F0H
+STKHALF:   EQU &E0
+STKZERO:   EQU &E1
+STK16K:    EQU &E2
+STKFONE:   EQU &E6
+STKONE:    EQU &E9
+STKTEN:    EQU &EC
+STKHALFPI: EQU &F0
 
 
 ;FPCMAIN.SAM - FLOATING POINT CALCULATOR CONTROL
@@ -1577,13 +1577,13 @@ BREGEN:    LD HL,(RST28V)
                              ;SEE FILES FOR 34H METHOD.
 
            LD B,0            ;USED LATER..
-           CP 20H
+           CP &20
            JR C,FPCBIN       ;JR IF BINARY OPERATOR (00-1FH)
 
-           CP 60H
+           CP &60
            JR C,FPCUNA       ;JR IF UNARY OPERATOR (20-5FH)
 
-           ADD A,20H         ;E0-FF ->00-1F
+           ADD A,&20         ;E0-FF ->00-1F
            JR C,FPCONST
 
            ADD A,8           ;D8-DF ->00-07
@@ -1597,7 +1597,7 @@ BREGEN:    LD HL,(RST28V)
            ADD A,8           ;C8-CF ->00-07
            JR C,FPSTOD
 
-           RST 08H
+           RST &08
            DB 51             ;'FPC error'
 
 ;HANDLE BINARY FPC OPERATION
@@ -1631,7 +1631,7 @@ FPUSEB:    LD A,(BCREG+1)
 ;STOD0, STOD1, ETC
 
 FPSTOD:    PUSH HL
-           DB 0FEH           ;'JR+1'
+           DB &FE            ;'JR+1'
 
 ;STORE TO A MEMORY (NO DELETE)
 
@@ -1670,13 +1670,13 @@ FPCONST:   LD C,A            ;C=00-1F. MANY VALUES OF C MAKE NO SENSE.
            LDIR
            RET               ;TO FPCLP WITH DE=NEW STKEND
 
-FPCTAB:    DB 80H            ;DISP 0 - 0.5
+FPCTAB:    DB &80            ;DISP 0 - 0.5
            DB 0              ;DISP 1 - ZERO
            DB 0              ;DISP 2 - 16384
            DB 0
            DB 0
-           DB 40H
-           DB 81H            ;DISP 6 - FP ONE
+           DB &40
+           DB &81            ;DISP 6 - FP ONE
            DB 0
            DB 0
            DB 0              ;DISP 9 - INTEGER ONE
@@ -1687,7 +1687,7 @@ FPCTAB:    DB 80H            ;DISP 0 - 0.5
            DB 10
            DB 0
 
-           DB 81H,49H,0FH,0DAH,0A2H  ;DISP 10H - PI/2
+           DB &81,&49,&0F,&DA,&A2   ;DISP 10H - PI/2
 
 ;TERMINATE FPC PARAM LIST
 
@@ -1753,7 +1753,7 @@ FPPSKIP:   INC IX            ;SKIP BYTES TO JUMP BY
 
 FPSOMELIT: LD B,(IX+0)       ;FETCH NUMBER OF LITERAL BYTES (5,10,15,20 ETC)
            INC IX
-           DB 21H            ;"JR+2"
+           DB &21            ;"JR+2"
 
 ;STACK 5-BYTE LITERAL FROM PARAM LIST
 
@@ -1858,12 +1858,12 @@ CYTRUE:    JR NC,SETFALSE
 ;SET LAST VALUE TO 'TRUE' (1). ENTRY: HL PTS TO LAST VALUE
 
 SETTRUE:   LD C,1
-           DB 0FEH           ;'JR+1'
+           DB &FE            ;'JR+1'
 
 ;SET LAST VALUE TO 'FALSE' (0). ENTRY: HL PTS TO LAST VALUE.
 ;EXIT: HL UNCHANGED, DE=HL+5, A=0
 
-SETFALSE:  LD C,00H
+SETFALSE:  LD C,&00
            LD D,H
            LD E,L
 
@@ -2068,7 +2068,7 @@ GETHLBC:   CALL GETINT
            POP HL
            RET
 
-           INCLUDE TRANSEND.SAM   ;SIN, COS, EXP, ETC
+;          INCLUDE TRANSEND.SAM   ;SIN, COS, EXP, ETC
 
 ;TRANSEND.SAM - TRANSCENDENTAL FUNCTIONS, AND ARITHMETIC
 ;W.E. THOMSON FASTER SINE/COSE
@@ -2083,20 +2083,20 @@ FPSIN:     DB CALC           ;X
            DB SOMELIT
            DB 25             ;25 BYTES FOLLOW (5 CONSTS)
 
-           DB 80H,0A5H,5DH,0E7H,2AH
-           DB 7DH,23H,35H,0E0H,36H
-           DB 79H,99H,68H,97H,0AEH
-           DB 74H,28H,0AH,10H,9EH
-           DB 6EH,0E6H,4FH,48H,19H
+           DB &80,&A5,&5D,&E7,&2A
+           DB &7D,&23,&35,&E0,&36
+           DB &79,&99,&68,&97,&AE
+           DB &74,&28,&0A,&10,&9E
+           DB &6E,&E6,&4F,&48,&19
 
            DB LDBREG         ;COUNTER
-           DB 05H
+           DB &05
 
 SINELP:    DB RCL0
            DB MULT
            DB ADDN
            DB DECB
-           DB 0FCH           ;LOOP TO SINELP, 5 TIMES
+           DB &FC            ;LOOP TO SINELP, 5 TIMES
 
            DB MULT
            DB EXIT2
@@ -2123,8 +2123,8 @@ FPTAN:     DB CALC
 
 FPREDARG:  DB CALC
            DB FIVELIT
-           DB 7EH,22H,0F9H
-           DB 83H,6EH        ;1/(2*PI)
+           DB &7E,&22,&F9
+           DB &83,&6E        ;1/(2*PI)
            DB MULT           ;X/(2*PI)=X IN 360 DEGREE UNITS
            DB DUP
            DB STKHALF        ;HALF =180 DEGREES IN THIS CONTEXT
@@ -2132,7 +2132,7 @@ FPREDARG:  DB CALC
            DB INT            ;X IN 360 DEGREE UNITS, INT 360 DEGREE UNITS+.5
            DB SUBN           ;X REDUCED TO -180 TO +180 DEGREES
            DB ONELIT
-           DB 04H
+           DB &04
            DB MULT           ;REDUCED X*4
            DB DUP
            DB ABS
@@ -2164,8 +2164,8 @@ FPEXP:     PUSH HL           ;PTR TO EXP. OF X
 
            DB CALC           ;X
            DB FIVELIT
-           DB 81H,38H
-           DB 0AAH,3BH,29H   ;X,1/LN 2
+           DB &81,&38
+           DB &AA,&3B,&29    ;X,1/LN 2
 
            DB MULT           ;X/LN 2=Y. NOW 2^Y IS REQUIRED RESULT
            DB EXIT
@@ -2189,22 +2189,22 @@ FPPOWR2:   PUSH HL           ;PTR TO EXP. OF TOP ENTRY
            DB SOMELIT
            DB 35             ;35 BYTES FOLLOW (7 CONSTS)
 
-           DB 80H,31H,72H,18H,16H
-           DB 7EH,75H,0FDH,0E5H,0E7H
-           DB 7CH,63H,59H,85H,4AH
-           DB 7AH,1DH,82H,11H,42H
-           DB 77H,30H,07H,1FH,00H
-           DB 74H,15H,0F0H,51H,92H
-           DB 71H,35H,0A0H,6FH,0BH
+           DB &80,&31,&72,&18,&16
+           DB &7E,&75,&FD,&E5,&E7
+           DB &7C,&63,&59,&85,&4A
+           DB &7A,&1D,&82,&11,&42
+           DB &77,&30,&07,&1F,&00
+           DB &74,&15,&F0,&51,&92
+           DB &71,&35,&A0,&6F,&0B
 
            DB LDBREG
-           DB 07H            ;COUNTER
+           DB &07            ;COUNTER
 
 EXPLP:     DB RCL0
            DB MULT
            DB ADDN
            DB DECB
-           DB 0FCH           ;LOOP TO EXPLP, 7 TIMES
+           DB &FC            ;LOOP TO EXPLP, 7 TIMES
 
            DB RCL1           ;2^W,INT Y
            DB EXIT
@@ -2248,7 +2248,7 @@ FPEXP3:    POP HL            ;PTR TO 2**W
 FPPOWER:   INC DE
            INC DE
            LD A,(DE)
-           AND 3FH
+           AND &3F
            LD B,A            ;IF N2=0-3FH, B=N2
 
            DB CALC           ;N1,N2
@@ -2256,12 +2256,12 @@ FPPOWER:   INC DE
            DB STKBREG        ;N1,N2,N2,BREG
            DB SUBN           ;N1,N2,N2-BREG
            DB JPFALSE        ;JP TO IPOWER IF BREG=N2
-           DB 0CH
+           DB &0C
 
            DB SWOP           ;N2,N1
            DB DUP            ;N2,N1,N1
            DB JPFALSE        ;JP TO ZPOWER IF N1=ZERO
-           DB 05H
+           DB &05
 
            DB LOGN           ;N2,LN N1
            DB MULT           ;N2*LN N1
@@ -2281,12 +2281,12 @@ IPOWER:    DB DROP           ;N1
            DB STKONE         ;1
            DB STKBREG        ;1,BREG
            DB JPFALSE        ;1
-           DB 05H            ;JP IF N1 TO POWER 0 - RESULT=1
+           DB &05            ;JP IF N1 TO POWER 0 - RESULT=1
 
            DB RCL0           ;T,N1
            DB MULT           ;NEW T
            DB DECB
-           DB 0FDH           ;LOOP, DOING N1*N1*N1*N1...BREG TIMES
+           DB &FD            ;LOOP, DOING N1*N1*N1*N1...BREG TIMES
 
            DB EXIT2
 
@@ -2307,24 +2307,24 @@ FPLOGN:    DB CALC           ;X
            JP NZ,INVARG      ;INVALID ARG IF X IS ZERO OR -VE
 
            LD A,(HL)         ;A=EXPONENT OF X
-           LD (HL),80H       ;X REDUCED TO 0.5-0.999999 RANGE
+           LD (HL),&80       ;X REDUCED TO 0.5-0.999999 RANGE
            LD B,A
 
            DB CALC
            DB STKBREG        ;NX,EXP
            DB ONELIT
-           DB 80H            ;NX,EXP,80H
+           DB &80            ;NX,EXP,80H
            DB SUBN           ;NX,TRUE EXP (PERHAPS -VE)
            DB SWOP           ;TE,NX
            DB DUP            ;TE,NX,NX
            DB FIVELIT
-           DB 80H,0CCH,0CCH
-           DB 0CCH,0CDH      ;TE,NX,NX,-0.8
+           DB &80,&CC,&CC
+           DB &CC,&CD        ;TE,NX,NX,-0.8
            DB ADDN           ;TE,NX,NX-0.8
            DB GRTR0          ;TE,NX,1/0
            DB SWOP23         ;NX,TE,1/0
            DB JPTRUE         ;TO LOGN3
-           DB 07H
+           DB &07
 
            DB STKFONE        ;NX,TE,1
            DB SUBN           ;NX,TE-1
@@ -2334,16 +2334,16 @@ FPLOGN:    DB CALC           ;X
            DB SWOP           ;2*NX,TE-1
 
 LOGN3:     DB FIVELIT
-           DB 80H,31H,72H
-           DB 17H,0F8H       ;NX (OR 2*NX), TE (OR TE-1), LN2
+           DB &80,&31,&72
+           DB &17,&F8        ;NX (OR 2*NX), TE (OR TE-1), LN2
            DB MULT           ;NX,TE*LN 2
            DB SWOP
            DB STKFONE        ;TE*LN 2-1,NX,1
            DB SUBN           ;TE*LN 2-1,NX-1
            DB DUP
            DB FIVELIT
-           DB 82H,20H,00H    ;TE*LN 2-1,NX-1,NX-1,2.5
-           DB 00H,00H
+           DB &82,&20,&00    ;TE*LN 2-1,NX-1,NX-1,2.5
+           DB &00,&00
            DB MULT           ;              ,(NX-1)*2.5
            DB STKHALF        ;
            DB SUBN           ;              ,2.5*NX-3
@@ -2351,18 +2351,18 @@ LOGN3:     DB FIVELIT
            DB SOMELIT
            DB 60             ;12 CONSTANTS
 
-           DB 80H,6EH,23H,80H,93H
-           DB 7DH,0A7H,9CH,7EH,5EH
-           DB 7AH,1BH,43H,0CAH,36H
-           DB 77H,0A0H,0FEH,5CH,0FCH
-           DB 74H,31H,9FH,0B4H,00H
-           DB 71H,0CBH,0DAH,96H,00H
-           DB 6EH,70H,6FH,61H,00H
-           DB 6CH,90H,0AAH,00H,00H
-           DB 69H,30H,0C5H,00H,00H
-           DB 66H,0DAH,0A5H,00H,00H
-           DB 64H,09H,00H,00H,00H
-           DB 61H,0ACH,00H,00H,00H
+           DB &80,&6E,&23,&80,&93
+           DB &7D,&A7,&9C,&7E,&5E
+           DB &7A,&1B,&43,&CA,&36
+           DB &77,&A0,&FE,&5C,&FC
+           DB &74,&31,&9F,&B4,&00
+           DB &71,&CB,&DA,&96,&00
+           DB &6E,&70,&6F,&61,&00
+           DB &6C,&90,&AA,&00,&00
+           DB &69,&30,&C5,&00,&00
+           DB &66,&DA,&A5,&00,&00
+           DB &64,&09,&00,&00,&00
+           DB &61,&AC,&00,&00,&00
 
            DB EXIT
 
@@ -2379,7 +2379,7 @@ FPARCTAN:  DB CALC
            DB GRTE0          ;X,1/0
            DB DUP            ;X,1/0,1/0 (1 IF ABS X>=1, ELSE 0)
            DB JPFALSE        ;JP IF ABS X<1, ARCTAN2, WITH X,0 ON FPCS
-           DB 0BH
+           DB &0B
 
            DB SWOP           ;1,X
            DB DIVN           ;1/X
@@ -2389,7 +2389,7 @@ FPARCTAN:  DB CALC
            DB SWOP           ;-1/X,PI/2,-1/X
            DB LESS0          ;-1/X,PI/2,1/0
            DB JPTRUE         ;JP IF -1/X IS -VE, ARCTAN2. (-1/X, PI/2 ON FPCS)
-           DB 02H
+           DB &02
 
            DB NEGATE         ;NEGATE PI/2 IF -1/X IS -VE
 
@@ -2406,18 +2406,18 @@ ARCTAN2:   DB SWOP           ;(+/-PI/2 OR 0),V
            DB SOMELIT
            DB 60             ;12 CONSTANTS
 
-           DB 80H,61H,0A1H,0B3H,0CH
-           DB 7CH,0D8H,0DEH,63H,0BEH
-           DB 79H,36H,73H,1BH,5DH
-           DB 76H,0B5H,09H,36H,0BEH
-           DB 73H,42H,0C4H,00H,00H
-           DB 70H,0DBH,0E8H,0B4H,00H
-           DB 6EH,00H,36H,75H,00H
-           DB 6BH,98H,0FDH,00H,00H
-           DB 68H,39H,0BCH,00H,00H
-           DB 65H,0E4H,8DH,00H,00H
-           DB 63H,0EH,00H,00H,00H
-           DB 60H,0B2H,00H,00H,00H
+           DB &80,&61,&A1,&B3,&0C
+           DB &7C,&D8,&DE,&63,&BE
+           DB &79,&36,&73,&1B,&5D
+           DB &76,&B5,&09,&36,&BE
+           DB &73,&42,&C4,&00,&00
+           DB &70,&DB,&E8,&B4,&00
+           DB &6E,&00,&36,&75,&00
+           DB &6B,&98,&FD,&00,&00
+           DB &68,&39,&BC,&00,&00
+           DB &65,&E4,&8D,&00,&00
+           DB &63,&0E,&00,&00,&00
+           DB &60,&B2,&00,&00,&00
 
            DB EXIT
 
@@ -2443,7 +2443,7 @@ SERILP:    DB DUP            ;   N,N
            DB SWOP           ;,C+N*M0-M1,N
            DB STOD1          ;,C+N*M0-M1
            DB DECB           ;DEC BREG, JR NZ, TO SERILP
-           DB 0F5H
+           DB &F5
 
            DB RCL2
            DB SUBN
@@ -2478,7 +2478,7 @@ FPARCCOS:  DB CALC
            DB SUBN
            DB EXIT2
 
-           INCLUDE MULT.SAM       ;ARITHMETIC
+;          INCLUDE MULT.SAM       ;ARITHMETIC
 
 ;MULT.SAM - MULTIPLY, DIVIDE, SUBTRACT, ADD
 
@@ -2757,7 +2757,7 @@ NXMBYTE:      EXX
               LD C,H         ;BC=N1 EXP (B IS 0)
               LD H,B         ;HL=N2 EXP
               ADD HL,BC      ;HL=EXP SUM+80H+80H
-              LD BC,-80H
+              LD BC,-&80
 
 ;ENTRY USED BY DIVIDE
 ;RESULT IS IN HL'DE, EXTRA BITS IN A. BC=+/-80H. BIT 7 OF STACKED AF=RESULT SGN
@@ -2806,7 +2806,7 @@ FPADDNEN:     JR NC,RNDDONE  ;JR IF NO NEED TO ROUND UP
 
               INC HL         ;ONLY IF ROUNDING RIPPLES RIGHT FORWARDS INC EXP
               EXX
-              LD H,80H       ;AND MAKE MANTISSA .1000000
+              LD H,&80       ;AND MAKE MANTISSA .1000000
               EXX
 
 RNDDONE:      POP AF         ;BIT 7=SGN BIT
@@ -2829,7 +2829,7 @@ FPSUBNEN:     INC H
 
               POP BC         ;RESULT MSW
               XOR B
-              AND 80H        ;USE BIT 7 FROM A, REST FROM B. A=SGNED MANT 1
+              AND &80        ;USE BIT 7 FROM A, REST FROM B. A=SGNED MANT 1
               XOR B
               LD B,L
 
@@ -2886,7 +2886,7 @@ FPDIVN2:      CALL MUDIADSR
 
               PUSH BC          ;EXP BYTES
 
-           LD BC,08FCH       ;8 BITS PER BYTE OF RESULT.
+           LD BC,&08FC       ;8 BITS PER BYTE OF RESULT.
                              ;C GOES FD,FE,FF,00 FOR 4 BYTES OF RESULT,
                              ;SAVES 33RD BIT AS CY ON FINAL LOOP WITH C=0
            JR FPDIVE
@@ -2956,7 +2956,7 @@ FPDIV4:    EXX
            LD B,H            ;HL=N1 EXP, BC=N2 EXP
            AND A
            SBC HL,BC
-           LD C,81H          ;80H TO BE ADDED TO COMP FOR 80H-80H IN EXP SBC,
+           LD C,&81          ;80H TO BE ADDED TO COMP FOR 80H-80H IN EXP SBC,
                              ;PLUS 1 TO COMP FOR RESULT IN 0.25-0.999 RANGE
 
 ;HL'DE=MANT, EXTRA BITS IN A. BC=81H. BIT 7 OF STACKED AF=SGN. (SP+2)=N1 PTR
@@ -3013,9 +3013,9 @@ FPADDN:       LD A,(DE)
               JR NZ,MIN0OK     ;DITTO
 
               DEC HL
-              LD (HL),91H      ;EXP
+              LD (HL),&91      ;EXP
               INC HL
-              LD (HL),80H      ;MAKE RESULT=65536
+              LD (HL),&80      ;MAKE RESULT=65536
 
 MIN0OK:       INC HL
               LD (HL),E
@@ -3117,7 +3117,7 @@ FPSUBN3:      POP DE
               LD A,(DE)
               JR NC,FPSUBN4    ;JR IF NO NEED TO REVERSE ORIG SGN AND NEG RESULT
 
-              XOR 80H          ;FLIP SGN BIT OF ORIG N1
+              XOR &80          ;FLIP SGN BIT OF ORIG N1
               EX AF,AF'
               EX DE,HL         ;MSW
               EXX
@@ -3203,7 +3203,7 @@ MUDIADSR:     INC DE
               INC HL
               EX AF,AF'
               LD A,(HL)        ;A'=N2 MANT 1
-              OR 80H
+              OR &80
               EX AF,AF'
               INC HL
               LD A,(HL)
@@ -3249,7 +3249,7 @@ FPFORM:       LD A,(HL)
               INC HL
               LD A,(HL)
               DEC HL
-              AND 7FH          ;TEST MANT 1, IGNORING SGN BIT
+              AND &7F          ;TEST MANT 1, IGNORING SGN BIT
               RET NZ           ;RET IF NOT A POWER OF TWO
 
               PUSH HL          ;NOW DO A LONGER TEST FOR POWERS OF 2. OTHER MANT
@@ -3273,7 +3273,7 @@ FPFORM2:      PUSH DE
               DEC HL
               DEC HL           ;PT TO MANT 1
               LD A,D
-              LD C,90H
+              LD C,&90
               AND A
               JR NZ,FPFORM3    ;JR IF INT IS >8 BITS
 
@@ -3281,7 +3281,7 @@ FPFORM2:      PUSH DE
               JR Z,FPFORM4     ;RET IF INT IS ZERO. ELSE A=E
 
               LD E,0          ;LS PART OF NUMBER
-              LD C,89H        ;INIT EXP
+              LD C,&89        ;INIT EXP
 
 FPFORMLP:     DEC C
 
@@ -3298,7 +3298,7 @@ FPFORM3:      RL E             ;NC INITIALLY AND LATER...
               DEC HL
               DEC HL
               LD (HL),C        ;PLACE EXPONENT
-              AND 7FH          ;IGNORE SGN BIT
+              AND &7F          ;IGNORE SGN BIT
               OR E             ;Z IF POWER OF TWO
               POP DE
               RET
@@ -3308,12 +3308,12 @@ FPFORM4:      DEC HL
               SCF              ;'ZERO'
               RET
 
-           INCLUDE ROM1FNS.SAM    ;POINT
+;          INCLUDE ROM1FNS.SAM    ;POINT
 ;ROM1FNS.SAM. CODE, LEN, INKEY$, BUTTON, SVAR, CHR$, BIN$, HEX$, MEM$, STR$,
 ;CONCAT, SQR, ABS, NEGATE, SGN, INT, TRUNCATE, ATTR, POINT
 ;*******************************************************************************
 
-FPVAL:     DB 3EH            ;'LD A,0AFH'
+FPVAL:     DB &3E            ;'LD A,&AF'
 
 FPVALS:    XOR A
            PUSH IX           ;** BUG FIX
@@ -3330,7 +3330,7 @@ FPVALS:    XOR A
 ;          CALL R1OFFCL      ;**
            CALL SCOPYWK        ;COPY STRING PLUS 1 BYTE OF JUNK TO WKSPACE
        ;    DEC HL           ;TERMINATE WITH 0DH
-      ;     LD (HL),0DH       ;TERMINATE STRING COPY IN WKSPACE
+      ;     LD (HL),&0D       ;TERMINATE STRING COPY IN WKSPACE
            LD (CHAD),DE
            IN A,(URPORT)
            LD (CHADP),A
@@ -3345,7 +3345,7 @@ FPVALS:    XOR A
            CALL EXPTEXPR     ;RETURN WITH Z FOR STRING, NZ FOR NUM.
            EX AF,AF'
            LD A,(HL)         ;TERMINATOR
-           CP 0DH
+           CP &0D
            JR NZ,VALNONS     ;CHECK FOR TERMINATOR
 
            POP HL            ;STRING START IN WKSPACE
@@ -3372,36 +3372,36 @@ FPVALOK:   LD (CHAD),HL
 SETUPDE:   LD DE,(STKEND)
            RET
 
-VALNONS:   RST 08H
+VALNONS:   RST &08
            DB 29
 
-FPDVAR:    RST 08H           ;LET DOS STACK ADDR OF ITS VARS
+FPDVAR:    RST &08           ;LET DOS STACK ADDR OF ITS VARS
            DB DVHK
-           DB 21H            ;'JR+2'
+           DB &21            ;'JR+2'
 
-FPEOF:     RST 08H
+FPEOF:     RST &08
            DB EOFHK          ;DOS EOF
-           DB 21H            ;'JR+2'
+           DB &21            ;'JR+2'
 
-FPPTR:     RST 08H
+FPPTR:     RST &08
            DB PTRHK          ;DOS PTR
            JR SUDH
 
 IMPATHS:   CALL SABORTER
 
-           RST 08H
+           RST &08
            DB PATHHK
 
 SUDH:      JR SETUPDE
 
 
-IMRND:     RST 20H           ;SKIP 'RND'
+IMRND:     RST &20           ;SKIP 'RND'
            CALL RUNFLG
            JR NC,IMRND4      ;JR IF NOT RUNNING
 
            LD B,0
            LD HL,(SEED)
-           LD E,0FDH
+           LD E,&FD
            LD D,L
            LD A,H
            ADD HL,HL
@@ -3423,12 +3423,12 @@ IMRND1:    LD (SEED),HL
            DB EXIT
 
            LD A,(HL)
-           SUB 10H           ;DIVIDE BY 65536
+           SUB &10           ;DIVIDE BY 65536
            JR C,IMRND4       ;LEAVE IT ALONE IF ZERO
 
            LD (HL),A         ;NEW EXP
 
-IMRND4:    RST 18H
+IMRND4:    RST &18
            CP "("
            RET NZ
 
@@ -3447,7 +3447,7 @@ IMRND4:    RST 18H
 IMATTR:    CALL EXB2NUMB  ;CHECK (X,Y). CY IF RUNNING
            RET NC
 
-           LD HL,1820H       ;LINE/COL LIMITS (PLUS 1)
+           LD HL,&1820       ;LINE/COL LIMITS (PLUS 1)
            CALL GETCP        ;GET CHAR POSITION WITHIN LIMITS, IN DE
            LD A,(MODE)
            CP 2
@@ -3458,7 +3458,7 @@ IMATTR:    CALL EXB2NUMB  ;CHECK (X,Y). CY IF RUNNING
 
            CALL M1DEADDR     ;GET CHAR ADDR
            LD A,D
-           ADD A,20H         ;GET ATTR ADDR (ADD 8K)
+           ADD A,&20         ;GET ATTR ADDR (ADD 8K)
            JR DOATT3
 
 DOATT2:    CALL M0DEADDR
@@ -3466,8 +3466,8 @@ DOATT2:    CALL M0DEADDR
            RRCA
            RRCA
            RRCA
-           AND 03H
-           OR 98H            ;FORM ATTR ADDR IN AE
+           AND &03
+           OR &98            ;FORM ATTR ADDR IN AE
 
 DOATT3:    LD D,A
            EX DE,HL
@@ -3485,12 +3485,12 @@ IMPOINT:   CALL EXB2NUMB  ;CHECK (X,Y). CY IF RUNNING
            LD B,A            ;B=X MOD 8+1
            CALL SREAD
            LD E,A            ;E=SCREEN BYTE
-           LD D,01H          ;MODE 0/1 MASK
+           LD D,&01          ;MODE 0/1 MASK
            LD A,(MODE)
            CP 2
            JR C,DPOINTC      ;JR IF MODE 0/1
 
-           LD D,0FH          ;MODE 3 MASK
+           LD D,&0F          ;MODE 3 MASK
            JR NZ,M3POINT     ;JR IF MODE 3
 
            LD D,3            ;MODE 2 MASK
@@ -3498,7 +3498,7 @@ IMPOINT:   CALL EXB2NUMB  ;CHECK (X,Y). CY IF RUNNING
            RLA
            RR E
            XOR E
-           AND 0AAH
+           AND &AA
            XOR E
            LD E,A            ;SWAP ODD/EVEN BITS IN MODE 2
 
@@ -3548,14 +3548,14 @@ GETCP:     PUSH HL           ;LINE/COL MAX
            CP H
            RET C
 
-OSERR:     RST 08H
+OSERR:     RST &08
            DB 32             ;'Off screen'
 
 
 ;*******************************************************************************
 ;INKEY$ #N
 
-FPINKEY:   LD DE,1100H+30    ;LIMIT <17
+FPINKEY:   LD DE,&1100+30    ;LIMIT <17
            CALL LIMBYTE
 
            LD HL,(CURCHL)
@@ -3576,10 +3576,10 @@ FPINKEN:   LD D,A
 
 ;MOUSE BUTTON N (1/2/3) RETURNS 1 IF PRESSED, 0 IF NOT
 
-FPBUTTON:  LD DE,0400H+30    ;LIMIT TO 0-3
+FPBUTTON:  LD DE,&0400+30    ;LIMIT TO 0-3
            CALL LIMBYTE
            CP 3              ;CY IF 0/1/2, NC IF 3
-           SBC A,0FFH        ;00,01,02,04
+           SBC A,&FF         ;00,01,02,04
            JR NZ,FPBT2
 
            CPL               ;'BUTTON 0' TEST ALL 3
@@ -3651,7 +3651,7 @@ FPHEXS:    CALL UNSTLEN      ;ABC=PAGE/'ADDR' **
            RRCA              ;LS 2 BITS TO POSN 7,6
            LD H,A
            XOR B
-           AND 0C0H
+           AND &C0
            XOR B
            LD B,A            ;HBC=20-BIT NUMBER
            LD E,0            ;INIT DIGIT COUNTER
@@ -3659,7 +3659,7 @@ FPHEXS:    CALL UNSTLEN      ;ABC=PAGE/'ADDR' **
            JR Z,HEX2DIG      ;JR IF MS 2 BYTES (OF 3)=0
 
            LD A,H
-           AND 0FH
+           AND &0F
            JR Z,HEX4DIG      ;JR IF MSB=0
 
            EX AF,AF'
@@ -3699,9 +3699,9 @@ HEXASCSR:  INC E
            RRCA
            RRCA
 
-HEXSRLP:   AND 0FH
-           CP 0AH
-           SBC A,69H         ;
+HEXSRLP:   AND &0F
+           CP &0A
+           SBC A,&69         ;
            DAA               ;A STRANGE TWIDDLE THAT GIVES THE RIGHT ANSWER!
            PUSH AF           ;SAVE ASCII 0-9, A-F
            LD A,B
@@ -3722,7 +3722,7 @@ MEMRYSP2:  DB CALC
            DB DUP
            DB LESS0          ;LEN, 1/0
            DB JPFALSE        ;JP IF LEN <0
-           DB 03H
+           DB &03
 
            DB DROP
            DB STKZERO        ;NULL STRING IF LEN <0
@@ -3781,7 +3781,7 @@ FPCONCAT:  IN A,(URPORT)
            POP DE            ;NEW STKEND
            JP PPORT
 
-;AMPERSAND-PREFACED HEX, E.G. &FC0D OR &12345 (6 DIGITS OK)
+;AMPERSAND-PREFACED HEX, E.G. &FC0D OR 12345H (6 DIGITS OK)
 ;VALUE EVALUATED DURING SYNTAX CHECK AND INSERTED AS A 5-BYTE FORM.
 
 AMPERSAND: XOR A
@@ -3790,23 +3790,23 @@ AMPERSAND: XOR A
            EX AF,AF'         ; IN A'HL
 
 AMPDILP:   EX DE,HL
-           RST 20H
+           RST &20
            EX DE,HL          ;HL=RESULT
-           SUB 30H           ;NUMS NOW 00-09, LETS 11-2A, 31-4A
+           SUB &30           ;NUMS NOW 00-09, LETS 11-2A, 31-4A
            JR C,AMPEND
 
-           CP 0AH
+           CP &0A
            JR C,AMPVALID     ;JR IF DIGIT
 
-           ADD A,30H
-           OR 20H            ;LETS NOW 61-7A
+           ADD A,&30
+           OR &20            ;LETS NOW 61-7A
            CP "a"
            JR C,AMPEND
 
            CP "g"
            JR NC,AMPEND
 
-           SUB 57H           ;a-f->0A-0F
+           SUB &57           ;a-f->0A-0F
 
 AMPVALID:  LD B,4
            EX AF,AF'
@@ -3828,7 +3828,7 @@ AMPEND:    LD B,H
            AND A
            JR Z,STACKBCH     ;JR IF SMALL INTEGER
 
-           LD B,98H          ;EXP FOR FF FF FF
+           LD B,&98          ;EXP FOR FF FF FF
 
 AMPALLP:   BIT 7,A
            JR NZ,AMPFP
@@ -3837,7 +3837,7 @@ AMPALLP:   BIT 7,A
            RLA
            DJNZ AMPALLP      ;B NEVER HITS ZERO!
 
-AMPFP:     AND 7FH           ;+VE SIGN BIT
+AMPFP:     AND &7F           ;+VE SIGN BIT
            LD E,A
            LD D,H
            LD C,L
@@ -3937,7 +3937,7 @@ FPSQR:     DB CALC
            AND A
            RET Z             ;RET IF SQR(0) WITH ZERO ON FPCS, DE=STKEND
 
-           ADD A,80H         ;GET TRUE EXPONENT. CY IF WAS >=80H
+           ADD A,&80         ;GET TRUE EXPONENT. CY IF WAS >=80H
            RRA               ;/2, WITH BIT 7 AS ORIGINAL
            LD (HL),A
            INC HL
@@ -3945,7 +3945,7 @@ FPSQR:     DB CALC
            RLA
            JP C,INVARG       ;ERROR IF SQR OF -VE NUMBER
 
-           LD (HL),7FH       ;MANTISSA STARTS AT ABOUT ONE
+           LD (HL),&7F       ;MANTISSA STARTS AT ABOUT ONE
            LD B,5            ;5 ITERATIONS
 
 SQURLP:    DB CALC
@@ -4013,7 +4013,7 @@ NEGABSC:   LD (HL),A         ;REVERSE SIGN (OR MAKE +VE IF ABS)
            LD (HL),C         ;LOAD IT BACK
            RET
 
-FPNEGAT2:  LD A,80H
+FPNEGAT2:  LD A,&80
            XOR (HL)          ;REVERSE SIGN BIT
            LD (HL),A
            RET
@@ -4033,7 +4033,7 @@ FPSGN:     CALL TSTZERO2
 
            SBC A,A           ;-VE=FF, +VE=00
            LD C,A
-           LD DE,0001H
+           LD DE,&0001
            JP STOREI         ;STORE SIGNED INTEGER, POP DE, RET
 
 ;*******************************************************************************
@@ -4048,7 +4048,7 @@ FPINT:     LD A,(HL)
            DB DUP            ;N1,N1
            DB GRTR0          ;N1,(0 OR 1)
            DB JPTRUE         ;JP IF +VE, FPINTP
-           DB 0BH            ;** BUG FIX
+           DB &0B            ;** BUG FIX
 
            DB DUP            ;N,N
            DB TRUNC          ;N,TRUNC N
@@ -4056,7 +4056,7 @@ FPINT:     LD A,(HL)
            DB SWOP13         ;TRUNC N,TRUNC N,N
            DB SUBN           ;TRUNC N,0 IF N WAS A WHOLE NUMBER
            DB JPFALSE        ;TRUNC N. JP IF VALUE WAS INTEGER, TO EXIT2
-           DB 03H
+           DB &03
 
            DB STKONE         ;TRUNC N,1
            DB SUBN           ;TRUNC N-1
@@ -4074,10 +4074,10 @@ FPTRUNCT:  LD A,(HL)
            RET Z             ;RET IF INTEGER
 
            LD B,8            ;FOR LATER
-           CP 81H
+           CP &81
            JR C,TRUNC0       ;JR IF LESS THAN 1
 
-           CP 91H
+           CP &91
            JR NC,TRUNCLG     ;JR IF >=65536
 
            PUSH DE
@@ -4087,7 +4087,7 @@ FPTRUNCT:  LD A,(HL)
            LD E,(HL)
            DEC HL
            DEC HL
-           LD C,0FFH
+           LD C,&FF
            BIT 7,D
            JR NZ,TRUNCI2     ;JR IF -VE WITH C=SIGN BYTE FOR SMALL INTEGER
 
@@ -4095,7 +4095,7 @@ FPTRUNCT:  LD A,(HL)
            INC C             ;SIGN BYTE FOR +VE=0
 
 TRUNCI2:   CPL
-           ADD A,91H
+           ADD A,&91
            SUB B             ;B=8
            ADD A,B
            JR C,TRUNCI3
@@ -4114,20 +4114,20 @@ TRUNCI4:   SRL D
 
 TRUNCI5:   JP STOREI
 
-TRUNCLG:   ADD A,60H
+TRUNCLG:   ADD A,&60
            RET P
 
            CPL
            INC A             ;NEG
-           DB 22H            ;"JR+2"
+           DB &22            ;"JR+2"
 
 ;NIL-BYTES.
 
-TRUNC0:    LD A,28H          ;ZERO 40 BITS - ALL OF THEM!
+TRUNC0:    LD A,&28          ;ZERO 40 BITS - ALL OF THEM!
 
 NILBYTES:  PUSH DE
            EX DE,HL          ;PT TO AFTER LAST BYTE OF NUMBER
-           DB 22H            ;"JR+2"
+           DB &22            ;"JR+2"
 
 NILBYLP:   LD (HL),0
 
@@ -4162,11 +4162,11 @@ FPUDG:     CALL SBUFFET
 IAHOP:     JP NZ,INVARG      ;LEN MUST BE 1
 
            LD A,(DE)         ;READ CHAR FROM BUFFER
-           CP 20H
+           CP &20
            JR C,IAHOP
 
            LD HL,(CHARS)
-           CP 80H
+           CP &80
            JR C,FPUDG3       ;JR IF RANGE 20H-7FH
 
            LD HL,(UDG)
@@ -4188,7 +4188,7 @@ FPUDG3:    EX DE,HL
            JP STACKHL        ;STACK CHAR PATTERN ADDR
 
 
-           INCLUDE SCRSEL1.SAM    ;OPEN/CLOSE SCREEN/PAGES, INTS, BOOTEX, SOUND,
+;          INCLUDE SCRSEL1.SAM    ;OPEN/CLOSE SCREEN/PAGES, INTS, BOOTEX, SOUND,
 ;SCRSEL1.SAM.  SCREEN, OPEN SCREEN, CLOSE SCREEN, SOUND
 
 ;SELECT SCREEN C
@@ -4227,7 +4227,7 @@ SCRNTLK1:  CALL GETBYTE      ;GET SCREEN NUMBER FROM FPCS
 
 SCRNTLK2:  DEC C
            LD A,C
-           CP 10H
+           CP &10
 
 ISCEH:     JP NC,ISCRERR     ;LIMIT SCREENS TO ORIG. OF 1-16
 
@@ -4235,7 +4235,7 @@ ISCEH:     JP NC,ISCRERR     ;LIMIT SCREENS TO ORIG. OF 1-16
            LD B,0
            ADD HL,BC
            LD A,(HL)         ;BIT 7=0, BITS 6-5=MODE, BITS 4-0=PAGE (BIT 0=0)
-           CP 0FFH
+           CP &FF
            RET               ;Z IF FF (CLOSED)
 
 ;*******************************************************************************
@@ -4256,7 +4256,7 @@ CLSCRN:    CP "#"
            JR Z,CLOS1        ;OK IF K, S, P, $ OR B **
                              ;HL=PTR TO LETTER IN CHANNEL, A=LETTER
            POP DE            ;STREAM PTR
-           RST 08H           ;CLOSE A NON-K/S/P STREAM.
+           RST &08           ;CLOSE A NON-K/S/P STREAM.
            DB CSHK           ;DOS CLOSE.
            RET
 
@@ -4270,7 +4270,7 @@ CLOS1:     LD DE,0           ;VALUE FOR STRM PTR IF CLOSING 4-15
            ADD HL,DE         ;PT HL TO INITIAL VALUE FOR STREAMS 0-3
            JP OPEN2
 
-CLNCH:     CP 0E7H           ;SCREENTOK
+CLNCH:     CP &E7            ;SCREENTOK
            JR Z,CLSC0
 
 ;CLOSE N PAGES
@@ -4314,17 +4314,17 @@ JCS2:      RET Z             ;END IF NOT USED YET
            DEC C             ;Z IF ORIG SCREEN NUMBER WAS 1 (C=0)
            JP Z,ISCRERR      ;CANNOT CLOSE SCREEN 1!
 
-           AND 1FH           ;ISOLATE PAGE USED BY SCREEN TO CLOSE
+           AND &1F           ;ISOLATE PAGE USED BY SCREEN TO CLOSE
            LD B,A
            LD A,(CUSCRNP)
-           AND 1FH
+           AND &1F
            CP B
            JR NZ,CNCS
 
-           RST 08H           ;CANNOT CLOSE CURRENT SCREEN
+           RST &08           ;CANNOT CLOSE CURRENT SCREEN
            DB 46             ;'Current screen'
 
-CNCS:      LD (HL),0FFH      ;MARK SCREEN ENTRY AS CLOSED
+CNCS:      LD (HL),&FF       ;MARK SCREEN ENTRY AS CLOSED
            LD L,B            ;HL WILL PT TO ALLOC TABLE ENTRY FOR SCRN PAGE
            LD H,ALLOCT/256
            XOR A
@@ -4357,7 +4357,7 @@ OPSCRN:    CP "#"
 
            JR NC,OPEN1       ;JR IF OPEN TO K/S/P, ERROR IF OPEN TO $/B/N
 
-SAOERR:    RST 08H
+SAOERR:    RST &08
            DB 45             ;'Stream is already open'
 
 OPEN1:     CALL SBFSR        ;COPY FILE NAME TO BUFFER. DE=START, A/C=LEN
@@ -4367,7 +4367,7 @@ OPEN1:     CALL SBFSR        ;COPY FILE NAME TO BUFFER. DE=START, A/C=LEN
            JR NZ,INVCHP      ;ERROR (OR DOS) IF NAME LONGER THAN 1. E.G.
                              ;OPEN #4;"S" IS OK BUT OPEN #4;"FILE" JUMPS
            LD A,(DE)
-           OR 20H            ;LETTERS BECOME L.C. AND '$' UNCHANGED
+           OR &20            ;LETTERS BECOME L.C. AND '$' UNCHANGED
            LD HL,CLTAB
            LD B,5            ;CHECK 5 CHANNEL TYPES
 
@@ -4380,7 +4380,7 @@ OPCL:      CP (HL)
 
 INVCHP:    POP HL            ;PTR TO STREAM PTR MSB
                              ;DE POINTS TO NAME, C=LEN
-           RST 08H           ;OPEN #S,A$ WITH A$ NOT K, S, P, $, OR B OR LEN>1
+           RST &08           ;OPEN #S,A$ WITH A$ NOT K, S, P, $, OR B OR LEN>1
            DB OSHK           ;DOS OPEN
            RET
 
@@ -4398,7 +4398,7 @@ CLTAB:     DB "k",1
            DB "$",21
            DB "b",26
 
-OPNCH:     CP 0E7H           ; SCREENTOK
+OPNCH:     CP &E7            ; SCREENTOK
            JR Z,OPSCR0
 
 ;OPEN N PAGES  OR OPEN TO PAGE N
@@ -4440,7 +4440,7 @@ OPL1:      INC (HL)
            LD B,C
            CALL SETLPG       ;DEC HL, SET LAST PAGE
 
-OPL4:      LD (HL),40H       ;RESERVE PAGE
+OPL4:      LD (HL),&40       ;RESERVE PAGE
            DEC HL
            DJNZ OPL4
 
@@ -4454,18 +4454,18 @@ JOPSCR:    PUSH BC           ;MODE IN B
 
 OPSCR0:    CALL SSYNTAX8     ;N,M
 
-           LD DE,0400H+34
+           LD DE,&0400+34
            CALL LIMDB        ;MODE 0-3 FROM ORIG OF 1-4
            PUSH AF           ;MODE
            CALL SCRNTLK1     ;GET N FROM FPCS, LOOK IN TABLE FOR SCREEN N
 
 JOPS2:     JR Z,OPSCR4       ;OK IF NOT USED YET
 
-           RST 08H
+           RST &08
            DB 44             ;'Screen already open'
 
 OPSCR4:    PUSH HL           ;SCREEN LIST PTR
-           LD HL,ALLOCT+20H  ;HL PTS TO ALLOCT TERMINATOR
+           LD HL,ALLOCT+&20  ;HL PTS TO ALLOCT TERMINATOR
 
 OPSCRLP:   DEC L
            LD A,(HL)
@@ -4482,15 +4482,15 @@ OPSCRLP:   DEC L
 ;A=MODE, HL PTS TO ALLOCT ENTRY, DE TO SCLIST ENTRY
 ;MARK ALLOCT, SCLIST
 
-           LD (HL),0C0H
+           LD (HL),&C0
            INC HL
-           LD (HL),0C0H      ;RESERVE PAGES IN SYSTEM PAGE ALLOC TABLE
+           LD (HL),&C0       ;RESERVE PAGES IN SYSTEM PAGE ALLOC TABLE
            DEC HL            ;L=PAGE NUMBER 02-1EH
            RRCA
            RRCA
            SRL A             ;0MMX XXXX
            XOR L
-           AND 0E0H          ;0MM FROM A, PAGE FROM L
+           AND &E0           ;0MM FROM A, PAGE FROM L
            XOR L
            LD (DE),A         ;MODE/PAGE DATA TO SCRN LIST
            PUSH AF           ;MODE/PAGE FOR NEW SCREEN
@@ -4518,7 +4518,7 @@ OPSCRLP:   DEC L
            POP AF            ;ORIG CUSCRNP
            CALL PRSVARS      ;RESTORE SCREEN VARS
            SCF               ;"RESTORE PALTAB"
-           DB 3EH            ;"JR+1"
+           DB &3E            ;"JR+1"
 
 SDISRC:    AND A             ;NC - "SAVE PALTAB"
 
@@ -4528,12 +4528,12 @@ SDISRC:    AND A             ;NC - "SAVE PALTAB"
 
 ;SEE IF PAGE L IS IN USE AS A SCREEN PAGE
 
-SPGLOOK:   LD B,10H
+SPGLOOK:   LD B,&10
            LD DE,SCLIST
 
 SPGLKLP:   LD A,(DE)
            INC DE
-           AND 1FH
+           AND &1F
            CP L
            RET Z             ;RET IF THIS CONTEXT USES PG L AS A SCREEN ALREADY
 
@@ -4542,14 +4542,14 @@ SPGLKLP:   LD A,(DE)
 
 ;OPEN/CLOSE PAGE SR
 
-OCPSR:     LD DE,1E00H+30
+OCPSR:     LD DE,&1E00+30
            CALL LIMDB        ;ALLOW ONLY 1-30
            LD B,C            ;B AND C=PAGES TO OPEN
            LD HL,ALLOCT
 
 OCL1:      INC HL
            LD A,(HL)
-           CP 40H
+           CP &40
            JR Z,OCL1         ;LOOK PAST LAST PAGE RESERVED BY BASIC
 
            LD D,L             ;NUMBER OF PAGES CURRENTLY USED
@@ -4642,7 +4642,7 @@ FRAMINT:   LD HL,(FRAMIV)
            RRA
            JR NC,FRMI3
 
-           LD L,>(PALTAB+35)
+           LD L,(PALTAB+35)\256
 
 FRMI3:     LD BC,16*256+CLUTPORT
            OTDR                      ;SET UP PALETTE MEMORIES
@@ -4687,7 +4687,7 @@ FRMI5:     LD HL,FRAMES
            AND A
            JR NZ,INTS2       ;JR IF 'SCREEN OFF' DISABLED
 
-           LD A,80H
+           LD A,&80
            OUT (KEYPORT),A
            LD (SOFLG),A      ;'SCREEN OFF'
 
@@ -4713,7 +4713,7 @@ INTS3:     LD HL,(MOUSV)
            LD HL,MSEDP
            LD B,8            ;READ MOUSE 9 TIMES TO CANCEL IT
 
-MSDML:     LD A,0FFH
+MSDML:     LD A,&FF
            IN A,(KEYPORT)
            LD (HL),A
            INC HL
@@ -4732,9 +4732,9 @@ INTS5:     CALL KEYRD2
 LINEINT:     LD HL,(LINIPTR)
 
 LNINSCAN:    LD D,(HL)                 ;D=SCAN LINE IN LINICOL ENTRY
-             LD BC,0100H+CLUTPORT      ;PORT BC READS PEN Y (SCAN LINE)
+             LD BC,&0100+CLUTPORT      ;PORT BC READS PEN Y (SCAN LINE)
              IN A,(KEYPORT)
-             AND 20H
+             AND &20
              JR NZ,LINILP              ;JR IF LIGHT PEN KEEPS PEN Y FROZEN
 
 LNWAITLP:    IN A,(C)
@@ -4792,7 +4792,7 @@ KEYRD2:    CALL KINTER       ;SCAN KEYBD, PLACE CHAR IN BUFFER IF THERE IS ONE.
            LD L,A
            LD H,0
            INC A
-           AND 07H
+           AND &07
            LD (KBQP+1),A     ;NEW HEAD POSN REFLECTS CHAR TRANSFER TO COME
            LD DE,KBQB
            ADD HL,DE         ;PT TO HEAD
@@ -4848,7 +4848,7 @@ KBXL:      RLCA
 
            INC (HL)
            LD A,(FLAGS)
-           AND 20H
+           AND &20
            RET NZ            ;RET IF STILL KEYS IN BUFFER (DO NOT ACCUMULATE
                              ;AUTO-REPEATING KEYS)
 
@@ -4867,7 +4867,7 @@ KBRK:      LD (HL),A         ;NEW KEY - SET UP REPCT FOR INITIAL DELAY BEFORE
                              ;BUFFER IS FULL
            LD A,L
            INC A
-           AND 07H
+           AND &07
            CP H
            RET Z             ;RET IF BUFFER FULL (WRAPPED SO END=HEAD)
 
@@ -4904,14 +4904,14 @@ KYVLP:     ADD HL,DE         ;PT TO CAPS SHIFT/SYM/CNTRL TABLE
            JR NZ,KYVLP
 
 KINT4:     LD A,(FLAGS2)
-           AND 08H           ;Z=CAPS LOCK OFF
+           AND &08           ;Z=CAPS LOCK OFF
            LD A,(HL)
            RET Z
 
            CALL ALPHA
            RET NC            ;RET IF NOT A LETTER
 
-           AND 0DFH          ;FORCE LOWER CASE LETTERS TO UPPER CASE
+           AND &DF           ;FORCE LOWER CASE LETTERS TO UPPER CASE
            RET
 
 ;KEYSCAN.
@@ -4934,10 +4934,10 @@ TWOKSC:    CALL KEYSCAN
 
 KEYSCAN:   LD HL,KBUFF       ;18-BYTE STORE
            PUSH HL
-           LD BC,0FE00H+KEYPORT
+           LD BC,&FE00+KEYPORT
                              ;C HAS PORT FOR BITS 4-0, B STARTS
                              ;WITH A8 LOW FOR 1ST KEY ROW
-           LD D,0E0H         ;MASK TO KEEP BITS 7-5 OF A, USE 4-0 OF E
+           LD D,&E0          ;MASK TO KEEP BITS 7-5 OF A, USE 4-0 OF E
 
 KBSL:      IN E,(C)          ;READ BITS 4-0
            LD A,B            ;A WILL BE ON HI ADDR LINES DURING PORT READ
@@ -4954,10 +4954,10 @@ KBSL:      IN E,(C)          ;READ BITS 4-0
            RLC B             ;NEXT PORT (FEFE, FDFE, FBFE...7FFE)
            JR C,KBSL         ;LOOP UNTIL BACK TO PORT FEFE AGAIN
 
-           LD B,0FFH
+           LD B,&FF
            JR KBSL
 
-KBEL:      OR 0E1H           ;ONLY BITS 4-0 VALID FOR PORT FFFE, AND FORCE
+KBEL:      OR &E1            ;ONLY BITS 4-0 VALID FOR PORT FFFE, AND FORCE
            LD (HL),A         ;BIT 0 (CONTROL KEY BIT) HI TOO
            POP HL            ;KBUFF
            LD D,H
@@ -5039,11 +5039,11 @@ KBBL:      DEC C
            XOR A
            LD (HL),A         ;'ON'
            LD A,(BORDCOL)
-           AND 7FH
+           AND &7F
            LD (BORDCOL),A
            OUT (KEYPORT),A
 
-KBSH:      LD BC,0FEFEH
+KBSH:      LD BC,&FEFE
            IN A,(C)
            LD D,1
            AND D
@@ -5056,7 +5056,7 @@ KBSH:      LD BC,0FEFEH
            JR Z,KBLD         ;JR IF CONTROL - D=3
 
            DEC D
-           LD B,7FH
+           LD B,&7F
            IN A,(C)
            AND D
            JR Z,KBLD         ;JR IF SYM SHIFT - D=2
@@ -5068,16 +5068,16 @@ KBLD:      LD (LASTKV),DE
            RET
                                   ;KEYRD2
 
-           INCLUDE SCRSEL2.SAM    ; GOTO, CONT, GETTOKEN, MODPT2, AUTO
+;          INCLUDE SCRSEL2.SAM    ; GOTO, CONT, GETTOKEN, MODPT2, AUTO
 ;SCRSEL2.SAM.
 
 GOSUB:     LD HL,GOSUB2
-           DB 0DDH           ;"JR+3"
+           DB &DD            ;"JR+3"
 
 GOTO:      LD HL,GOTO2
 
 GSUBTOC:   PUSH HL
-           CP 0DEH           ;ONTOK
+           CP &DE            ;ONTOK
            JR Z,GOTON
 
            CALL EXPT1NUM     ;LINE NUMBER
@@ -5118,7 +5118,7 @@ GOTONRL:   PUSH BC           ;C=EXPR NUMBER
            RET Z             ;RET TO GOTO OR GOSUB IF THIS IS DESIRED EXPR
 
            CALL FDELETE      ;DISCARD EXPR FROM FPCS
-           RST 18H
+           RST &18
            CP ","
            JR Z,GOTONRL      ;LOOP IF THERE ARE MORE LINE NOS TO SKIP
 
@@ -5130,7 +5130,7 @@ GOSUB2:    CALL GETINT
            INC A
            JP Z,IOORERR
 
-           LD B,00H          ;'GOSUB' TYPE
+           LD B,&00          ;'GOSUB' TYPE
            PUSH HL           ;LINE NO.
            CALL BSTKE        ;STACK RETURN ADDR
            POP HL
@@ -5153,7 +5153,7 @@ GTTOK2:    BIT 7,(HL)
            INC HL
            LD A,(DE)
            XOR (HL)
-           AND 0DFH
+           AND &DF
            JR NZ,GTTOK2      ;LOOP BACK AND CHECK ANOTHER WORD IF MATCH FAILS
                              ;ABOUT 80 TS PER LOOP IF NO MATCH. ABOUT 35USEC
                              ;PER 5-LETTER WORD OR 5.3MSEC FOR 150 WORDS.
@@ -5173,10 +5173,10 @@ GTTOK3:    INC HL
            INC HL            ;BUT DON'T INSIST - SKIP LIST PTR IF NO SP IN INPUT
 
 GTTOK4:    XOR (HL)
-           AND 0DFH
+           AND &DF
            JR Z,GTTOK3       ;LOOP IF STILL MATCHING OK
 
-           AND 7FH
+           AND &7F
            JR NZ,GTTOK5      ;JR IF INPUT AND LIST WORDS DON'T END NOW
 
            LD A,(HL)
@@ -5186,7 +5186,7 @@ GTTOK4:    XOR (HL)
 GTTOK5:    POP DE
            JR GTTOK2
 
-GTTOK6:    CP 7EH            ;('=' TERMINATOR =7B AFTER RLCA, '>'=7DH, '$'=49H)
+GTTOK6:    CP &7E            ;('=' TERMINATOR =7B AFTER RLCA, '>'=7DH, '$'=49H)
            CCF               ;NC IF '=' OR '>' OR '$'
            LD A,(DE)         ;INPUT CHAR AFTER MATCHED WORD
            CALL C,ALDU       ;CALL TO INSIST ON NON-LETTER AFTER E.G. PRINTx
@@ -5199,7 +5199,7 @@ GTTOK6:    CP 7EH            ;('=' TERMINATOR =7B AFTER RLCA, '>'=7DH, '$'=49H)
            RET
 
 
-MODPT2:    AND 03H
+MODPT2:    AND &03
            LD HL,MODE
            LD C,(HL)
            PUSH BC           ;SAVE PREVIOUS MODE
@@ -5217,12 +5217,12 @@ MODPT2:    AND 03H
            LD HL,CUSCRNP
            LD A,(HL)         ;KEEP CURRENT VID PAGE,
            XOR C             ;BUT
-           AND 9FH           ;USE BITS 6 AND 5 OF C TO SET MODE
+           AND &9F           ;USE BITS 6 AND 5 OF C TO SET MODE
            XOR C
            LD (HL),A
            IN A,(VIDPORT)
            XOR (HL)
-           AND 1FH
+           AND &1F
            JR NZ,MDL2        ;JR IF WE ARE NOT DISPLAYING THIS SCREEN - AVOID
                              ;ALTERING HARDWARE MODE
            LD A,(HL)
@@ -5233,7 +5233,7 @@ MDL2:      POP AF            ;NEW MODE
            PUSH AF           ;NEW MODE
            CP 1              ;CY IF MODE 0
            SBC A,A           ;MODE 0=FF, REST=0
-           LD HL,0809H       ;CHAR WIDTH/HEIGHT FOR MODES 1-3
+           LD HL,&0809       ;CHAR WIDTH/HEIGHT FOR MODES 1-3
            ADD A,L
            LD L,A            ;DEC HEIGHT TO 8 IF MODE 0, TO FIT ATTR
            POP AF
@@ -5293,7 +5293,7 @@ MDSR:      PUSH AF           ;NEW MODE
            LD (TEMPB1),A
            LD (CSIZE),HL     ;H=WIDTH, L=HEIGHT
            LD A,192
-           LD E,0FCH
+           LD E,&FC
 
 MDSL:      INC E
            SUB L             ;SUB CHAR HEIGHT
@@ -5346,7 +5346,7 @@ MDSR3:     LD HL,UWRHS
 
 FATPIX:    CALL SYNTAX6
 
-           LD DE,0200H+30    ;LIMIT TO <2 OR IOOR
+           LD DE,&0200+30    ;LIMIT TO <2 OR IOOR
            CALL LIMBYTE
 
            LD HL,THFATP
@@ -5366,7 +5366,7 @@ SETFP:     LD HL,(XCOORD)
 
            SRL H
            RR L              ;HALVE X
-           DB 3EH            ;'JR+1'
+           DB &3E            ;'JR+1'
 
 FPX2:      ADD HL,HL         ;DOUBLE X COORD TO KEEP SAME SCREEN POSN
 
@@ -5380,7 +5380,7 @@ FPX2:      ADD HL,HL         ;DOUBLE X COORD TO KEEP SAME SCREEN POSN
            CALL R1OFFJP
            DW CGXRG          ;CHANGE XRG WITH ROM1 OFF **
 
-PXIOOR:    RST 08H
+PXIOOR:    RST &08
            DB 30             ;IOOR
 
 ;CSIZE W,H
@@ -5518,7 +5518,7 @@ SNDLP:     PUSH DE
            PUSH DE
            CALL GETBYTE
            PUSH AF
-           LD DE,2000H+30
+           LD DE,&2000+30
            CALL LIMBYTE      ;ALLOW 0-31
            POP BC
            POP DE
@@ -5529,16 +5529,16 @@ SNDLP:     PUSH DE
            INC E
            JP Z,NRFLERR      ;LIMIT TO 254 VALUES IN INSTBUF (127 PAIRS)
 
-SND1:      RST 18H
+SND1:      RST &18
            CP ";"
            JR NZ,SND2
 
-           RST 20H           ;SKIP ';'
+           RST &20           ;SKIP ';'
            JR SNDLP
 
 SND2:      CALL CHKEND
 
-           LD A,0FFH
+           LD A,&FF
            LD (DE),A         ;TERMINATE LIST
            LD BC,256+SNDPORT ;SOUND ADDRESS REG PORT
            LD HL,INSTBUF     ;HOLDS AT LEAST ONE PAIR
@@ -5572,29 +5572,29 @@ BOOT:      CALL SYNTAX3
            AND A
            JR Z,BOOTNR       ;JR IF DOS NOT RESIDENT - ELSE AUTOLOAD ONLY
 
-           RST 08H
+           RST &08
            DB ALHK           ; DO AUTO-LOAD
            RET
 
 BOOTNR:    CALL BOOTEX
 
-           RST 08H
+           RST &08
            DB BTHK           ;DO AUTO-LOAD, BUT NO ERROR IF NONE
            RET
 
-BOOTEX:    LD HL,ALLOCT+1FH
+BOOTEX:    LD HL,ALLOCT+&1F
 
 FDPL:      LD A,(HL)
            AND A
            JR Z,GDP          ;JR IF FREE PAGE
 
-           CP 60H
+           CP &60
            JR Z,GDP          ;JR IF RE-BOOTING TO A DOS PAGE
 
            DEC L
            JR NZ,FDPL
 
-           RST 08H
+           RST &08
            DB 1              ;'OUT OF MEMORY' IF NO FREE PAGE FOR DOS
 
 GDP:       LD A,L
@@ -5602,13 +5602,13 @@ GDP:       LD A,L
 
                              ;START OF BRUCE GORDONS CODE
                              ;LOAD STUFF NOW
-           LD C,0D0H         ;RESET CHIP
+           LD C,&D0          ;RESET CHIP
            CALL SDCX         ;EXITS WITH B=0
            CALL REST
 
            ;TEST FOR INDEX HOLE
 
-           LD H,0FEH         ;HL=FEXX
+           LD H,&FE          ;HL=FEXX
            LD E,H            ;E COUNTS 2 OUTER LOOPS
            LD B,6
 
@@ -5620,7 +5620,7 @@ BOOT2:     DEC HL
            INC E
            JR NZ,BOOT3
 
-           RST 08H           ;'Missing disc'
+           RST &08           ;'Missing disc'
            DB 55
 
 BOOT3:     IN A,(COMM)
@@ -5633,7 +5633,7 @@ BOOT3:     IN A,(COMM)
            DJNZ BOOT2
 
            CALL REST
-           LD DE,0401H       ;TRACK/SECTOR
+           LD DE,&0401       ;TRACK/SECTOR
 
 ;READ SECTOR AT TRACK D, SECTOR E
 
@@ -5659,9 +5659,9 @@ RSA3:      CALL SADC
 RSA4:      DI
            LD C,DRSEC
            CALL SADC
-           LD HL,8000H
+           LD HL,&8000
            LD BC,DTRQ
-           DB 0FEH           ;"JR+2" (CP EDH: AND D)
+           DB &FE            ;"JR+2" (CP EDH: AND D)
 
 RSA5:      INI
 
@@ -5676,7 +5676,7 @@ RSA6:      IN A,(COMM)
 
 ;CHECK DISC ERROR COUNT
 
-           AND 0EH
+           AND &0E
            JR Z,BTNOE        ;JR IF NO ERRORS
 
            EX AF,AF'
@@ -5691,23 +5691,23 @@ RSA6:      IN A,(COMM)
            EX AF,AF'
            JR RSA1
 
-BTNOE:     LD DE,80FFH
+BTNOE:     LD DE,&80FF
            LD HL,BTWD
            LD B,4
 
 BTCK:      INC DE
            LD A,(DE)
            XOR (HL)
-           AND 5FH           ;IGNORE MISMATCH ON BITS 7 OR 5
+           AND &5F           ;IGNORE MISMATCH ON BITS 7 OR 5
            JR Z,BTLY
 
-           RST 08H
+           RST &08
            DB 53             ;'NO DOS' IF NOT 'BOOT'
 
 BTLY:      INC HL
            DJNZ BTCK
 
-           JP 8009H          ;DOS INITIALISE
+           JP &8009          ;DOS INITIALISE
 
 SADC:      CALL BUSY
 
@@ -5733,7 +5733,7 @@ BUSY:      IN A,(COMM)
            CALL BRKCR
            JR BUSY
 
-           INCLUDE PRINTFP.SAM
+;          INCLUDE PRINTFP.SAM
 ;PRINTFP.SAM - PRINT A NUMBER
 
 
@@ -5813,7 +5813,7 @@ PFNMIN:    CP "0"
                              ;(=div by 10 if fract: 0998->999 but 0999->1000)
            LD A,(EPOWER)
            DEC A             ;0->FF
-           CP 80H            ;CY IF +VE, NZ EPOWER (FRACTION) (80H NOT CRITICAL)
+           CP &80            ;CY IF +VE, NZ EPOWER (FRACTION) (80H NOT CRITICAL)
            ADC A,1           ;A=ORIG IF 0 OR -VE, ELSE A=A+1
            CP 8
            JR Z,PFNEZ        ;JR IF FRACTION ROUNDED UP TO 1
@@ -5877,13 +5877,13 @@ PFPOWOK:   LD A,(FRACLIM)    ;NORMALLY 6, TO ALLOW UP TO 4 LEADING ZEROS
 
            CPL
 
-NEGEFORM:  LD L,2FH          ;"0"-1
+NEGEFORM:  LD L,&2F          ;"0"-1
 
 CALCELP:   INC L
            SUB 10
            JR NC,CALCELP
 
-           ADD A,3AH
+           ADD A,&3A
            PUSH AF
            EX DE,HL          ;RESULT IN EA (POWER AS ASCII)
            ADD HL,BC         ;HL=PRNBUFF, BC=LEN - GET PAST END
@@ -5968,7 +5968,7 @@ PFSETPRB:  LD DE,PRNBUFF     ;BC=LEN
 ;EXIT: HL=BEFORE SPACE. BC SAVED
 
 PFSPACE:   PUSH BC
-           LD H,0FFH
+           LD H,&FF
            NEG
            LD L,A            ;HL=-SPACE
            PUSH HL
@@ -6028,10 +6028,10 @@ PRFPBUF:   LD HL,DIGITS
            AND A
            RET Z             ;EXIT WITH "0" IF ZERO
 
-           CP 81H
+           CP &81
            JR C,PRBORS       ;JR IF NO BITS BEFORE BINARY POINT (<1)
 
-           SUB 80H           ;=BITS BEFORE BINARY POINT (1-7F)
+           SUB &80           ;=BITS BEFORE BINARY POINT (1-7F)
            CP 30
            JR NC,PRBORS      ;IF MORE THAN 29 BITS - MIGHT NOT FIT IN 9 DIG. BCD
 
@@ -6086,7 +6086,7 @@ PRFRLP:    XOR A             ;START WITH CARRY OF ZERO
 
 ;LE=DE*10+A. CY IN A
 
-TENX       LD C,E
+TENX:      LD C,E
            CALL TENMUL
            LD E,L
            LD C,D
@@ -6129,7 +6129,7 @@ SHIFTDEC:  DEC A
 
            CALL FDELETE
            LD A,(HL)         ;A=EXP OF DELETED RESULT
-           SUB 80H
+           SUB &80
            JP PRMEDN         ;HL PTS TO DROPPED NUMBER (NOW LARGE INTEGER)
 
 NPRPNT:    LD A,"."
@@ -6140,14 +6140,14 @@ NPRZERO:   XOR A
 
 ;PRINT "A" AND DEC "DIGITS TO COME". CY IF BUFFER FULL (CHAR STILL ENTERED, THO)
 
-NPRINTC:   ADD A,30H
+NPRINTC:   ADD A,&30
            PUSH HL
            LD HL,DIGITS
            DEC (HL)
            JR NZ,NPRINT2     ;JR IF SPACE OK
 
            SCF               ;CY=BUFFER FULL
-           DB 21H            ;"JR+2"
+           DB &21            ;"JR+2"
 
 ;THIS ENTRY FOR CHARS THAT DON"T COUNT - LIKE "-" AND "."
 
@@ -6168,15 +6168,15 @@ NPRINT3:   LD HL,(NPRPOS)
 ;PT. IF DECDIGN
 
 DECDIGN:   LD C,A
-           LD A,80H
+           LD A,&80
            SUB C             ;1-80H->7F-00H
 
 DECDIGP:   CALL STACKA
 
            DB CALC
            DB FIVELIT
-           DB 7FH,1AH,20H
-           DB 9AH,85H        ;0.30103
+           DB &7F,&1A,&20
+           DB &9A,&85        ;0.30103
            DB MULT
            DB TRUNC
            DB DROP
@@ -6226,7 +6226,7 @@ DECIMBLP:  LD A,(DE)
 ;USES HL,BC,AF
 
 PRBCD:     LD C,1            ;NZ C SIGNALS "LEADING ZEROS - IGNORE"
-           LD A,0FH          ;CLEAR LHS OF A, AND MARK RHS WITH NON-BCD DIGIT
+           LD A,&0F          ;CLEAR LHS OF A, AND MARK RHS WITH NON-BCD DIGIT
 
 BCDDIG:    LD B,5            ;BCD ROTATE OF 5 BYTES
            LD HL,BCDBUFF+4
@@ -6242,8 +6242,8 @@ BCDROTL:   RLD               ;RHS NIBBLE OF (HL) TO A, LHS NIBBLE TO RHS,
            JR NZ,BCDDIG      ;IGNORE ANY. ELSE A=0 FOR NON-LEADING ZERO
 
 PRDIGIT:   LD C,B            ;C=0 - NO LEADING ZEROS NOW
-           AND 0FH
-           CP 0AH
+           AND &0F
+           CP &0A
            RET NC            ;RET IF TERMINATOR HIT
 
            CALL NPRINTC
@@ -6300,19 +6300,19 @@ POF10L3:   INC B
            RET               ;DELETE LAST POWER, LEAVE N1**A ON FPCS
 
 
-           INCLUDE TPRINT.SAM
+;          INCLUDE TPRINT.SAM
 ;TPRINT.SAM - PRINT ASCII AND CR.
 
-PROM1:     CP 20H
+PROM1:     CP &20
            JP C,PRCRLCDS
 
-           CP 80H
+           CP &80
            JP NC,PRGR80
 
 PRASCII:   LD DE,(CHARS)
            LD HL,FLAGS
            SET 0,(HL)        ;'SPACE WAS LAST CHAR'
-           CP 20H
+           CP &20
            JR Z,PRINTMN1
 
            RES 0,(HL)        ;'LAST CHAR WAS NOT SPACE'
@@ -6337,9 +6337,9 @@ NLENTRY:   CALL POFETCH      ;GET DE=COL/ROW, A=RHS LIMIT
            SUB E             ;Z IF JUST 1 PAST RHS LIMIT - LINE FULL; ELSE CR
            LD C,A            ;WAS USED JUST BEFORE
            PUSH BC
-           LD E,0FFH         ;COL FF SHOWS 'RECURSIVE' CR
+           LD E,&FF          ;COL FF SHOWS 'RECURSIVE' CR
            LD A,(DEVICE)
-           ADD A,0FEH        ;CY IF PRINTER
+           ADD A,&FE         ;CY IF PRINTER
            PUSH HL
            CALL PRENTER
            POP HL            ;GET CHAR PATTERN BACK
@@ -6355,7 +6355,7 @@ NLENTRY:   CALL POFETCH      ;GET DE=COL/ROW, A=RHS LIMIT
            PUSH BC
            CALL INDOPEN        ;O/P SPACES IF POSN WAS JUST 1 PAST RHS LIMIT -
            POP AF              ;LINE WAS FULL. ELSE CR WAS USED.
-           RST 10H
+           RST &10
            RET
 
 PRNONWLN:  PUSH DE           ;CURRENT PRINT POSN
@@ -6428,7 +6428,7 @@ PRGR80:    LD C,A
            JR C,POUDGH       ;JR IF IN QUOTES, OR INPUT LINE - PRINT UDGS,
                              ;NOT TOKENS
            LD A,C
-           CP 85H
+           CP &85
 
 POUDGH:    JP C,POUDG        ;80-84H ARE ALWAYS UDGS
 
@@ -6440,13 +6440,13 @@ PRGR802:   LD HL,(PRTOKV)
            INC A
            JP Z,POFN         ;JP IF FF FN LEADER
 
-           SUB 86H           ;(PLUS 1 TO COMPENSATE FOR INC)
+           SUB &86           ;(PLUS 1 TO COMPENSATE FOR INC)
            LD DE,KWDS85      ;SPLIT CMDS LIST INTO 4 SUB-LISTS FOR SPEED
-           CP 1BH
+           CP &1B
            JR C,POBTL        ;85-9FH
 
-           SUB 1BH
-           LD H,20H
+           SUB &1B
+           LD H,&20
            LD DE,KWDSA0      ;A0-BF
            CP H
            JR C,POBTL
@@ -6506,7 +6506,7 @@ POMSPX:    SCF
            JR POGEN2
 
 POMSP2:    SCF               ;NO LEADING OR TRAILING SPACES
-           DB 26H            ;"JR+1". FOR MSGS OR E.G. PI/ITEM/POINT
+           DB &26            ;"JR+1". FOR MSGS OR E.G. PI/ITEM/POINT
 
 POBTL:     AND A             ;BOTH TRAILING AND LEADING SPACES
 
@@ -6521,7 +6521,7 @@ POGEN2:    POP AF            ;LEADING STATUS
            LD A,(FLAGS)
            RRA
            LD A," "
-           CALL NC,0010H     ;PRINT LEADING SPACE IF PREVIOUS CHAR WASN'T ONE
+           CALL NC,&0010     ;PRINT LEADING SPACE IF PREVIOUS CHAR WASN'T ONE
 
 POMSG3:    CALL PRINTSTR     ;OUTPUT BC FROM (DE)
            POP AF
@@ -6536,7 +6536,7 @@ POMSG3:    CALL PRINTSTR     ;OUTPUT BC FROM (DE)
            RET NZ            ;'$' IS ALSO FOLLOWED BY A SPACE, BUT NOT =/>/#
 
 POMSG4:    LD A," "
-           RST 10H
+           RST &10
            RET
 
 ;A=MSG NUMBER 00->, DE=START OF MSG LIST
@@ -6564,15 +6564,15 @@ LKHIBTLP:  LD A,(DE)         ;WITH ABOUT 4 CHARS/TOKEN, TAKES ABOUT 0.7 MS
 POMSR4:    DJNZ LKHIBTLP
 
 MVWORDLP:  LD A,(DE)
-           AND 7FH
-           CP 20H
+           AND &7F
+           CP &20
            JR NC,MVWORD2     ;JR WITH ALL EXCEPT COMPRESSION CODES 00-1F
 
            PUSH DE           ;SAVE MAIN MSG PTR
            LD DE,COMPLIST    ;LIST OF COMPRESSION CODED WORDS
            CALL POMSR3       ;RECURSIVE CALL
            POP DE            ;MAIN MSG PTR
-           DB 01H            ;'JR+2'
+           DB &01            ;'JR+2'
 
 MVWORD2:   LD (HL),A
            INC HL
@@ -6602,7 +6602,7 @@ PUDGS:     LD A,(BGFLG)      ;BLOCK GRAPHICS FLAG
            LD A,C
            JR NZ,POFUDG      ;JR IF FOREIGN SET/UDGS WANTED, NOT BLOCKS
 
-           CP 90H
+           CP &90
            JR NC,POFUDG      ;>=90H ARE FOREIGN/UDGS ANYWAY
 
            CALL QUADBITS     ;GET LOWER 4 BITS OF A INTO DE, QUADRUPLED
@@ -6625,11 +6625,11 @@ BKGRL2:    LD (HL),D
            JP NLENTRY
 
 POFUDG:    LD HL,(HUDG)      ;HI UDG FOR CHARS. >A8H
-           SUB 0A9H
+           SUB &A9
            JR NC,POUDG1      ;JR IF HI UDG
 
            LD A,C
-           LD DE,0FB80H      ;COMP. FOR A BEING 80H-A8H AND UDG VAR PTING
+           LD DE,&FB80       ;COMP. FOR A BEING 80H-A8H AND UDG VAR PTING
            LD HL,(UDG)       ;TO CHR$ 144
            ADD HL,DE
 
@@ -6692,10 +6692,10 @@ PRCOMMA:   LD A,E            ;COL
            PUSH AF
            LD A,(TABVAR)
            AND A
-           LD BC,0F010H      ;FOR 16-COLUMN TAB
+           LD BC,&F010       ;FOR 16-COLUMN TAB
            JR Z,PCOM2
 
-           LD BC,0F808H      ;FOR 8-COLUMN TAB
+           LD BC,&F808       ;FOR 8-COLUMN TAB
 
 PCOM2:     LD A,(WINDRHS)
            CP E
@@ -6719,7 +6719,7 @@ OPAORZ:    RET Z
 OPASPACES: LD B,A
 
 OPSPLP:    LD A," "
-           RST 10H
+           RST &10
            DJNZ OPSPLP
 
            RET
@@ -6730,7 +6730,7 @@ PC25:      POP AF
 
 
 PRQUERY:   LD A,"?"
-           RST 10H
+           RST &10
            RET
 
 ;*******************************************************************************
@@ -6753,7 +6753,7 @@ POSTOREH:  EX DE,HL
 
 CURLF2:    LD E,A            ;COL=RHS
            LD A,(DEVICE)
-           ADD A,0FEH        ;CY IF PRINTER (DEVICE 2)
+           ADD A,&FE         ;CY IF PRINTER (DEVICE 2)
 
 CURUP:     JR C,PRQUERY      ;PRINT '?' IF LPRINTING - POSN UNCHANGED
 
@@ -6769,7 +6769,7 @@ CURRT:     LD HL,(OVERT)     ;OVERT/INVERT
            PUSH HL
            LD A,(M23PAPT)
            PUSH AF
-           LD HL,0001H       ;OVER 1;INVERSE 0
+           LD HL,&0001       ;OVER 1;INVERSE 0
            LD B,1
            JR SPOX
 
@@ -6778,10 +6778,10 @@ CURRT:     LD HL,(OVERT)     ;OVERT/INVERT
 PRDELL:    JR C,PRQUERY      ;JR IF LPRINTING
 
            LD A,8
-           RST 10H           ;BACKSPACE
+           RST &10           ;BACKSPACE
            CALL SPO0         ;PRINT OVER 0;' ';
            LD A,8            ;BACKSPACE
-           RST 10H
+           RST &10
            RET
 
 ;ERASE OLD CURSOR, GET H=TABLE MSB, GET C=LNPTR
@@ -6818,12 +6818,12 @@ OPBSP:     LD HL,(OVERT)     ;OVERT/INVERT
            PUSH AF
            LD A,(M23PAPP)
            LD (M23PAPT),A    ;PERM PAPER
-           LD HL,0000H       ;OVER 0, INVERSE 0
+           LD HL,&0000       ;OVER 0, INVERSE 0
 
 SPOX:      LD (OVERT),HL
 
-OPSL:      LD A,20H
-           RST 10H           ;PRINT SPACE
+OPSL:      LD A,&20
+           RST &10           ;PRINT SPACE
            DJNZ OPSL
 
            POP AF
@@ -6833,7 +6833,7 @@ OPSL:      LD A,20H
            RET
 
 CURDN:     PUSH DE           ;SAVE COL.
-           LD E,0FEH         ;FORCE ACTUAL MOVE DOWN
+           LD E,&FE          ;FORCE ACTUAL MOVE DOWN
            CALL PRENTER      ;EXIT WITH HL=POSN
            POP DE
            LD L,E            ;UNCHANGED COL.
@@ -6842,7 +6842,7 @@ CURDN:     PUSH DE           ;SAVE COL.
 PRENTER:   JR C,LPRENT       ;JR IF LPRINT
 
            LD A,E            ;COL
-           CP 0FEH
+           CP &FE
            JR C,PRENT3       ;IF PREVIOUS CHAR WAS NOT CR, JUST SET COL 0FEH.
                              ;('LINE FULL') ELSE DROP DOWN A LINE
            LD A,(WINDBOT)
@@ -6860,14 +6860,14 @@ PRENT2:    INC D             ;DOWN A LINE
            JR Z,PRENT4       ;JR IF WAS RECURSIVE CR FROM 'LINE FULL' - LHS COL
                              ;FOR CHAR COMING NEXT
 
-PRENT3:    LD A,0FEH         ;'LINE FULL, NOT RECURSIVE'
+PRENT3:    LD A,&FE          ;'LINE FULL, NOT RECURSIVE'
 
 PRENT4:    LD E,A
            EX DE,HL
 
 PRENT5:    JP POSTORE
 
-LPRENT:    LD A,0DH
+LPRENT:    LD A,&0D
            CALL CHBOP        ;O/P CR ON CHANNEL 'B'
            XOR A
            LD (PRPOSN),A
@@ -6911,7 +6911,7 @@ CCRP2:     LD HL,(TVDATA)    ;H=1ST OPERAND (IF 2),L=CONTROL CODE
 
            LD D,A            ;LAST OPERAND (ONLY OPERAND IF 1, ELSE 2ND)
            LD A,L            ;CONTROL CODE
-           CP 16H
+           CP &16
            JP C,PRCOITEM
 
            JR Z,POATCC       ;JR IF 'AT'
@@ -6981,7 +6981,7 @@ SLSLP:     PUSH BC
 POSTORH:   EX DE,HL
            JP POSTORE
 
-PATER:     RST 08H
+PATER:     RST &08
            DB 32             ;'OFF SCREEN'
 
 ;SAVE CURRENT O/P ADDR
@@ -6996,7 +6996,7 @@ SVCUROP:   LD HL,(CURCHL)
 ;SCROLL SCREEN
 
 SCRLSCR:   LD A,(TVFLAG)
-           AND 10H
+           AND &10
            JR Z,SCRLSCR2     ;JR IF NOT AUTO-LIST
 
            LD A,(BCREG)
@@ -7014,11 +7014,11 @@ SCRLSCR2:  LD A,(DEVICE)
            CALL BRKCR
            LD A,(SPROMPT)
            AND A
-           JR NZ,DOSCTL      ;JR IF PROMPS TURNED OFF
+           JR NZ,DOSCRL      ;JR IF PROMPS TURNED OFF
 
            LD HL,SCRCT
            DEC (HL)
-           JR NZ,DOSCTL      ;JR IF NOT TIME FOR PROMPP YET
+           JR NZ,DOSCRL      ;JR IF NOT TIME FOR PROMPP YET
 
            CALL SETSCRCT
            CALL SVTEMPS      ;SAVE TEMPORARY ATTRIBUTES ETC
@@ -7033,7 +7033,7 @@ SCRLSCR2:  LD A,(DEVICE)
            CP " "
            JR Z,BRCH
 
-           AND 0DFH
+           AND &DF
            CP "N"
 
 BRCH:      CALL Z,IOPOF      ;INDENT O/P OFF. EXIT WITH Z
@@ -7081,7 +7081,7 @@ SCRLS:     LD HL,LWTOP
            JR DOSCRL         ;SCROLL LS
 
 RSTTEMPS:  AND A
-           DB 26H            ;'JR +1'
+           DB &26            ;'JR +1'
 
 SVTEMPS:   SCF
            LD HL,THFATT
@@ -7134,7 +7134,7 @@ FONOP2:    LD BC,(MNOP)
            PUSH BC
            RET
 
-           INCLUDE TAPEMN.SAM     ;SAVE, LOAD, MERGE, VERIFY
+;          INCLUDE TAPEMN.SAM     ;SAVE, LOAD, MERGE, VERIFY
 ;TAPEMN.SAM - SAVE/LOAD/MERGE/VERIFY CONTROL
 ;SYNTAX CHECK FOR ALL TAPE COMMANDS STARTS AT SLMVC
 
@@ -7167,11 +7167,11 @@ FONOP2:    LD BC,(MNOP)
 
 ;SAVE, LOAD, VERIFY, MERGE ALL ENTER HERE
 
-SLMVC:     SUB 0A6H          ;OVERTOK
+SLMVC:     SUB &A6           ;OVERTOK
            LD (OVERF),A
            JR NZ,NOVE
 
-           RST 20H           ;SKIP "OVER"
+           RST &20           ;SKIP "OVER"
 
 NOVE:      LD HL,(PSLD)
            LD (SLDEV),HL     ;PERM DEVICE TO TEMP
@@ -7181,13 +7181,13 @@ NOVE:      LD HL,(PSLD)
            LD HL,HDR+1       ;HEADER BUFFER ADDR
            LD B,25
 
-HDCLP:     LD (HL),20H       ;CLEAR NAMES AREAS WITH SPACES
+HDCLP:     LD (HL),&20       ;CLEAR NAMES AREAS WITH SPACES
            INC HL
            DJNZ HDCLP
 
            LD B,14
 
-HDCLP2:    LD (HL),0FFH      ;CLEAR REST WITH FFH
+HDCLP2:    LD (HL),&FF       ;CLEAR REST WITH FFH
            INC HL
            DJNZ HDCLP2
 
@@ -7203,7 +7203,7 @@ NLTP:      LD A,C
            JR NC,IFNER       ;LIMIT NAME LEN
 
            LD HL,HDR+1       ;DEST FOR FIRST NAME CHAR
-           LD (HL),0FFH      ;ASSUME NAME IS NULL
+           LD (HL),&FF       ;ASSUME NAME IS NULL
            AND A
            LD A,(CURCMD)
            JR NZ,TNMOK       ;JR IF NAME LEN IS 1-MAX CHARS LONG
@@ -7211,7 +7211,7 @@ NLTP:      LD A,C
            CP SAVETOK
            JR NZ,HDR2        ;JR IF NOT SAVE (WITH A NULL NAME)
 
-IFNER:     RST 08H
+IFNER:     RST &08
            DB 18             ;'Invalid file name'
 
 TNMOK:     CP SAVETOK
@@ -7230,8 +7230,8 @@ TNMOK:     CP SAVETOK
 MVTNM:     EX DE,HL
            LDIR              ;COPY NAME TO BUFFER
 
-HDR2:      RST 18H
-           CP 0FFH
+HDR2:      RST &18
+           CP &FF
            JR Z,HDR4         ;JR IF FN LEADER FOUND (SHOULD BE SCREEN$ OR CODE)
 
 HDR3:      CP LINETOK
@@ -7296,7 +7296,7 @@ RNTVL:     LD H,(IX+0)
            LD A,16           ;TYPE=PROG
            JP SLVMC          ;JP TO COMMON ROUTINE
 
-HDR4:      RST 20H           ;SKIP FFH
+HDR4:      RST &20           ;SKIP FFH
            CP CODETOK
            JR NZ,HDR5
 
@@ -7305,7 +7305,7 @@ HDR4:      RST 20H           ;SKIP FFH
            LD DE,HDR+HDN     ;PT TO HDR AREA FOR NUMBERS
            LD B,3            ;MAX OF 3 NUMS FOLLOW 'CODE'
 
-           RST 20H           ;SKIP 'CODE'
+           RST &20           ;SKIP 'CODE'
            CALL CRCOLON
            JR NZ,HDRNMS      ;JR IF NOT JUST "NAME" CODE
 
@@ -7319,7 +7319,7 @@ HDRNLP:    DEC B
 
 HDNSHP:    JP Z,NONSENSE     ;JR IF MORE THAN 3 NUMBERS USED
 
-           RST 20H
+           RST &20
 
 HDRNMS:    PUSH BC           ;COUNT
            PUSH DE           ;PTR
@@ -7340,7 +7340,7 @@ HDRNMS:    PUSH BC           ;COUNT
 
 HDRN1:     POP DE
            POP BC            ;NO. COUNT
-           RST 18H
+           RST &18
            CP ","
            JR Z,HDRNLP       ;LOOP FOR ANOTHER NO. IF A COMMA FOLLOWED THE LAST
 
@@ -7365,7 +7365,7 @@ HDR5:      CP SCRNTOK
            CALL SABORTER     ;SKIP 'SCREEN$'
 
            CALL FLITE        ;GET BC=LINE INT TABLE LEN
-           LD HL,0028H
+           LD HL,&0028
            ADD HL,BC         ;ALLOW FOR PALTAB
            LD A,(MODE)
            LD (HDR+16),A     ;MODE
@@ -7381,7 +7381,7 @@ HDR5:      CP SCRNTOK
            INC HL
            LD (HL),0
            INC HL
-           LD (HL),80H       ;START IS AT 8000H IN SCREEN PAGE
+           LD (HL),&80       ;START IS AT 8000H IN SCREEN PAGE
            INC HL
            LD (HL),C         ;LEN MSB
            INC HL
@@ -7403,14 +7403,14 @@ HDRSC2:    POP BC            ;PALTAB+LINITAB LEN
            LD A,20           ;'SCREEN$' TYPE
            JR SLVMC          ;JR TO COMMON ROUTINE
 
-HDR6:      CP 0B9H           ;DATATOK
+HDR6:      CP &B9            ;DATATOK
            JP NZ,HDRLNOK
 
            LD A,(CURCMD)
            CP MERGETOK
            JR Z,SVDNH        ;MERGE "NAME" DATA NOT ALLOWED
 
-           RST 20H           ;SKIP 'DATA'
+           RST &20           ;SKIP 'DATA'
            CALL R1OFFCL
            DW LENGSR         ;** BUG FIX
            PUSH AF           ;FOUND/NOT FOUND STATUS
@@ -7421,11 +7421,11 @@ HDR6:      CP 0B9H           ;DATATOK
 
            JR NC,SVDS1       ;JR IF NOT RUNNING
 
-           RST 18H
+           RST &18
            CP ")"
            JR NZ,SVDTT       ;MUST BE NAME$
 
-           RST 20H           ;SKIP ')'
+           RST &20           ;SKIP ')'
            JR SVDTT          ;MUST BE NAME$()
 
 SVDS1:     BIT 6,C
@@ -7438,7 +7438,7 @@ SVDNU:     DEC B             ;TYPE=17
 
 SVDNH:     JP Z,NONSENSE     ;ERROR IF NON-ARRAY NUMERIC
 
-SVNSC:     RST 18H
+SVNSC:     RST &18
            CALL INSISCBRK    ;INSIST ON ')', SKIP
 
 SVDTT:     POP AF
@@ -7480,7 +7480,7 @@ LVMMAIN:   CALL TORN
            JR Z,LKTH         ;JR IF TAPE, OR N AND NO DOS
 
            LD IX,HDR
-           RST 08H
+           RST &08
            DB FOPHK          ;CALL DOS TO LOAD HDR (OPEN FILE FOR READ)
            JR LDFL
 
@@ -7499,7 +7499,7 @@ LDFL:      LD A,(HDL)
            JR NZ,CDSCVE      ;JR IF LOAD/VERIFY CODE
 
            LD A,(HDL+HFG)
-           AND 02H
+           AND &02
            JR NZ,CDSCVE      ;JR IF PROT - CANNOT STOP AUTO-RUN CODE
 
            DEC A
@@ -7582,12 +7582,12 @@ STSPEC3:   PUSH DE
 
            LD A,(HDR+HDN+6)
            LD HL,(HDR+HDN+7)
-           CP 0FFH
+           CP &FF
            JR NZ,HDLDEX      ;JR IF LOAD EXEC - OVER-RIDES ANY SAVED EXEC
 
 HDNSTP:    LD A,(HDL+HDN+6)
            LD HL,(HDL+HDN+7) ;AHL=LOADED EXEC ADDR (REL PAGE FORM) OR FFXXXX
-           CP 0FFH
+           CP &FF
            RET Z             ;RET IF NO EXEC ADDR
 
 HDLDEX:    CALL PDPSR2       ;SWITCH IN CORRECT PAGE, FIDDLE HL IF NEEDED
@@ -7605,7 +7605,7 @@ LDVDBLK:   LD A,(CURCMD)
 
 LDDBLK:    SCF               ;LOAD
 
-LDVD2:     LD A,0FFH         ;DATA BLOCK
+LDVD2:     LD A,&FF          ;DATA BLOCK
            PUSH AF
            CALL TORN         ;Z IF 'T', OR 'N' AND NO DOS
            JR Z,LDVD3        ;IF NO DOS LET ROM HANDLE NET LOAD
@@ -7614,11 +7614,11 @@ DOSLV:     LD IX,HDR
            POP AF            ;HL=DEST, CDE=LEN
            JR C,DOSLD
 
-           RST 08H
+           RST &08
            DB VFYHK          ;DOS VERIFY FOR DISC/NET ETC
            RET
 
-DOSLD:     RST 08H
+DOSLD:     RST &08
            DB LDHK           ;DOS LOAD FOR DISC/NET ETC
            RET
 
@@ -7626,7 +7626,7 @@ LDVD3:     POP AF
            CALL LDBYTES
            RET C
 
-TERROR:    RST 08H
+TERROR:    RST &08
            DB 19             ;'LOADING ERROR'
 
 
@@ -7636,7 +7636,7 @@ LDSCRN:    LD A,(MODE)
            LD C,A
            LD HL,HDL+16
            LD A,(HL)
-           CP 20H            ;20H IF THIS IS A CODE FILE LOADED AS SCREEN$
+           CP &20            ;20H IF THIS IS A CODE FILE LOADED AS SCREEN$
            JR NZ,LDSC2       ;JR IF IT IS A SCREEN$ FILE LOADED AS SCREEN$
 
            LD (HL),C         ;SET MODE=CURRENT MODE FOR CODE FILE
@@ -7648,7 +7648,7 @@ LDSC2:     CP C
            CALL SELSCRN
            LD HL,HDL+HDN+3
            CALL RDTHREE      ;CDE=LOADED LEN
-           LD HL,8000H       ;SCREEN START
+           LD HL,&8000       ;SCREEN START
            PUSH DE
            CALL LDVDBLK
            POP DE
@@ -7677,7 +7677,7 @@ LDSC2:     CP C
            LD DE,PALTAB
            JR Z,PMV          ;MOVE LOADED PALTAB TO ACTIVE PALTAB, OR STORED
                              ;AREA, IF CURRENT SCRN IS INVIS.
-           LD DE,PALBUF-4000H
+           LD DE,PALBUF-&4000
 
 PMV:       LDIR              ;COPY PALTAB (40 BYTES)
 
@@ -7693,7 +7693,7 @@ PMV:       LDIR              ;COPY PALTAB (40 BYTES)
 
            DI
            LDIR
-           LD A,0FFH
+           LD A,&FF
            OUT (STATPORT),A  ;PREVENT ANY LINE INTS TILL AFTER NEXT FRAME
            EI
            RET
@@ -7759,7 +7759,7 @@ LDCR3:     PUSH HL
            LD B,D
            LD C,E
            CALL MKRBIG       ;OPEN ABC AT HL
-           LD (HL),0FFH      ;IN CASE LOAD FAILS!!
+           LD (HL),&FF       ;IN CASE LOAD FAILS!!
            POP DE
            POP BC
            IN A,(251)
@@ -7777,7 +7777,7 @@ LDCR3:     PUSH HL
            LD HL,HDR+16
            LD A,(DE)
            XOR (HL)
-           AND 0F0H
+           AND &F0
            XOR (HL)
            LD (DE),A         ;TYPE FROM LOADED ARRAY, NAME LEN FROM REQUESTED
            INC DE            ;PT TO NAME
@@ -7834,8 +7834,8 @@ LKHDR:     CALL LDHDR
            CALL STREAMFE     ;"S"
            LD A,(HDL)        ;TYPE
            LD C,A
-           OR 10H
-           CP 15H
+           OR &10
+           CP &15
            JR NC,LKHDR
 
            LD HL,HDL+HFG
@@ -7846,13 +7846,13 @@ LKHDR:     CALL LDHDR
            RRA
            JR C,LKHNP        ;JR IF NO PRINTING OF NAMES WANTED
 
-           LD A,0DH
-           RST 10H
+           LD A,&0D
+           RST &10
            LD A,"*"
            BIT 4,C
-           CALL Z,0010H      ;PRINT "*" BEFORE NAME IF ZX TYPE
+           CALL Z,&0010      ;PRINT "*" BEFORE NAME IF ZX TYPE
            LD A,C            ;A=16-20
-           OR 10H
+           OR &10
            SUB 12            ;A=4-8
            CALL UTMSG        ;PRINT TYPE MSG
 
@@ -7886,7 +7886,7 @@ LKHTM:     INC HL
 
 PRHDLP:    LD A,(DE)
            XOR (HL)
-           AND 0DFH          ;IGNORE MISMATCH ON BIT 5 (LC/UC)
+           AND &DF           ;IGNORE MISMATCH ON BIT 5 (LC/UC)
            JR Z,PRHDC        ;JR IF MATCH BETWEEN LOADED NAME CHAR AND DESIRED
 
            INC C             ;NZ C REG SHOWS A MISMATCH
@@ -7894,7 +7894,7 @@ PRHDLP:    LD A,(DE)
 PRHDC:     LD A,(HDL+HFG)
            RRA
            LD A,(DE)         ;LOADED NAME CHAR
-           CALL NC,0010H     ;PRINT UNLESS TURNED OFF
+           CALL NC,&0010     ;PRINT UNLESS TURNED OFF
            INC HL
            INC DE
            DJNZ PRHDLP
@@ -7905,10 +7905,10 @@ PRHDC:     LD A,(HDL+HFG)
 
            LD A,(HDL+HFG)
            RRA
-           LD A,0DH
+           LD A,&0D
            RET C
 
-           RST 10H           ;CR AFTER LAST (MATCHED) FILE NAME
+           RST &10           ;CR AFTER LAST (MATCHED) FILE NAME
            RET
 
 ;LOAD A HEADER
@@ -7941,13 +7941,13 @@ LDHDR:     LD HL,HDL
            CALL PAGEFORM
            LD (HDL+HDN+3),A
            LD (HDL+HDN+4),HL ;SAM LENGTH FORMAT
-           LD C,20H          ;NORMAL 'SCREEN MODE' FOR SAM CODE FILE **
+           LD C,&20          ;NORMAL 'SCREEN MODE' FOR SAM CODE FILE **
            LD HL,(HDL+13)    ;ZX START ADDR
            LD A,H            ;DEST ADDR MSB
-           CP 40H
+           CP &40
            JR C,HDTR5
 
-           CP 5BH
+           CP &5B
            JR NC,HDTR5
 
 ;MUST BE LOADING TO SCREEN
@@ -7964,7 +7964,7 @@ HDTR5:     LD A,C
            DEC A
            LD (HDL+HDN),A
            LD (HDL+HDN+1),HL ;SAM START ADDR FORMAT (IRREL IF SCREEN$)
-           LD A,0FFH
+           LD A,&FF
            LD (HDL+HDN+6),A  ;NO EXEC ADDR
            SCF               ;'OK'
            RET
@@ -7983,7 +7983,7 @@ SAPA2:     ADD A,(HL)
            JR Z,SVFL         ;LET ROM HANDLE T SAVE, OR NET SAVE IF NO DOS
 
 SADOS:     LD IX,HDR
-           RST 08H
+           RST &08
            DB SVHK           ;DOS SAVE
            RET
 
@@ -8023,23 +8023,23 @@ SAHDDB:  ;  IN A,(250)
            INC HL
            CALL RDTHREE      ;CDE=LEN
            POP HL            ;START
-           LD A,0FFH         ;MAIN BLOCK
+           LD A,&FF          ;MAIN BLOCK
            JP SABYTES
 
 
 ;GET SCREEN LEN
 ;ENTRY: A=MODE. EXIT: ADE=001B00H IF MODE 0, 003800H IF MODE 1, ELSE 012000H
 
-SCRLEN:    LD DE,1B00H       ;MODE 0 SCRN LEN
+SCRLEN:    LD DE,&1B00       ;MODE 0 SCRN LEN
            AND A
            RET Z
 
-           LD D,38H          ;MODE 1 SCRN LEN=3800H
+           LD D,&38          ;MODE 1 SCRN LEN=3800H
            DEC A
            RET Z
 
            LD A,1            ;A=16K PAGE. MODES 2 AND 3 LEN=4000H+2000H
-           LD D,20H
+           LD D,&20
            RET
 
 TORN:      CALL TCHK
@@ -8058,14 +8058,14 @@ TCHK:      LD A,(SLDEV)
 
 ;CALLED BY VIDSEL AND TAPEMN
 
-CUS2:      AND 7FH           ;MIDI OUT BIT INACTIVE
+CUS2:      AND &7F           ;MIDI OUT BIT INACTIVE
            LD D,A
            IN A,(VIDPORT)
-           AND 7FH
+           AND &7F
            CP D
            RET
 
-           INCLUDE TAPEX.SAM
+;          INCLUDE TAPEX.SAM
 ;
 ;TAPEX.SAM - TAPE/NET EXECUTIVE ROUTINES
 
@@ -8126,7 +8126,7 @@ SABLK:     DI
            ADD A,A
            JR NC,SVLC
 
-           LD A,0FEH         ;HI VALUE IF CY
+           LD A,&FE          ;HI VALUE IF CY
 
 SVLC:      INC A
            LD H,A            ;H PRODUCES DELAY ABOUT TWICE AS LONG AS L
@@ -8152,10 +8152,10 @@ SVCLC:     ADD HL,DE
 
            ADD HL,HL         ;LONGER LEADER IF HEADER
 
-SVTYP:     LD DE,0202H       ;D'=BORDER LS 3 BITS - RED
+SVTYP:     LD DE,&0202       ;D'=BORDER LS 3 BITS - RED
 
 SVHDR:     LD A,D
-           XOR 0FH
+           XOR &0F
            LD D,A
            OUT (KEYPORT),A
            LD B,C
@@ -8190,7 +8190,7 @@ SVBL:      LD C,H            ;ASSUME HI BIT
            LD C,L            ;GET DELAY FOR A LOW BIT
 
 SV2:       LD A,D            ;BORDER COLOUR.
-           XOR 0FH           ;FLIP MIC AND BORDER BITS
+           XOR &0F           ;FLIP MIC AND BORDER BITS
            OUT (KEYPORT),A   ;38 OR 37 FROM SVBL TO END OF OUT INSTRUCTION
                              ;55 OR 54 FROM PREV OUT, PLUS DELAY (IF WITHIN BYTE
            LD B,C
@@ -8199,7 +8199,7 @@ SVDL:      DJNZ SVDL         ;THESE 2 INSTRUCTIONS GIVE DELAY OF 13*C, -1
 
            DEC C
            DEC C             ;SUB 26 Ts FROM DELAY
-           XOR 0FH           ;NC
+           XOR &0F           ;NC
            RL E
            OUT (KEYPORT),A   ;34 TO END OF OUT FROM PREV OUT, PLUS DELAY
 
@@ -8241,20 +8241,20 @@ SV4:       DEC DE
            XOR B
            EX AF,AF'         ;PARITY
 
-SV45:      LD A,0F7H
+SV45:      LD A,&F7
            IN A,(STATPORT)
-           AND 20H
+           AND &20
            SCF
            RET Z             ;RET IF ESC KEY HIT - CY
 
            INC HL
            LD A,H
-           CP 0C0H
+           CP &C0
            IN A,(251)
            INC A             ;READY IN CASE PASSED BFFF
            JR C,SV5          ;JR IF OK (ADDR HASN'T PASSED BFFF YET)
 
-           LD H,80H
+           LD H,&80
            OUT (251),A       ;NEXT PAGE
 
 SV5:       LD A,B
@@ -8426,8 +8426,8 @@ BLWAV:     ADD A,A
            JR NZ,LDLDR       ;LOOK FOR 256 LEADER PULSES
                              ;L ENDS AS ZERO - PARITY BYTE INIT STATE.
            LD A,B
-           AND 0F8H
-           OR 02H
+           AND &F8
+           OR &02
            LD B,A            ;RED BORDER NOW
 
            EXX
@@ -8500,19 +8500,19 @@ LDDE:      EX AF,AF'
 LDVERIF:   XOR (HL)
            RET NZ            ;RET IF MATCH FAILED - NC,NZ
 
-           DB 3EH            ;"JR+1"
+           DB &3E            ;"JR+1"
 
 LDNVER:    LD (HL),A         ;STORE LOADED BYTE
 
 LDNEXT:    EX AF,AF'         ;PROTECT FLAGS
            INC HL            ;INC DEST PTR
            LD A,H
-           CP 0C0H
+           CP &C0
            IN A,(251)
            INC A
            JR C,LDDEC        ;JR IF NOT PAST BFFFH
 
-           LD H,80H
+           LD H,&80
            OUT (251),A       ;NEXT PAGE
 
 LDDEC:     EXX
@@ -8614,7 +8614,7 @@ NIXR:      EXX
 
 NIXL:      PUSH AF
            PUSH DE
-           LD DE,4000H       ;DO 16K
+           LD DE,&4000       ;DO 16K
            CALL NIXJ
            POP DE
            POP AF
@@ -8628,14 +8628,14 @@ NIXJ:      LD A,D
            RET Z
 
            LD A,H
-           CP 0C0H
+           CP &C0
            CALL NC,INCURPAGE ;** BUG FIX AND RE-WRITE
            CALL IXJUMP       ;INPUT OR OUTPUT
            INC HL
            DEC DE
            JR NIXJ
 
-           INCLUDE USING.SAM      ;INSTR, LENGTH, STRING$, XOINTERS
+;          INCLUDE USING.SAM      ;INSTR, LENGTH, STRING$, XOINTERS
 ;USING.SAM
 ;POINTERS
 ;ENTRY: HL=LOCN (PAGED IN), CDE=ADJUSTMENT, CY IF SUBTRACT
@@ -8653,7 +8653,7 @@ X31:       EX AF,AF'         ;CY'=ADD/SUB FLAG
            LD (TEMPW5),DE
            EX DE,HL
            IN A,(251)
-           AND 1FH
+           AND &1F
            LD C,A
            BIT 6,D
            JR Z,PNT1
@@ -8696,7 +8696,7 @@ PNT15:     PUSH AF           ;SAVE ORIG WKEND (END OF BLOCK TO MOVE)
            LD A,(CLA+1)
            AND A
            LD A,L
-           LD L,>CHADP
+           LD L,CHADP\256
            CALL Z,SMBS       ;IF RUNNING ELINE, MAKE CHAD SAME BASE AS ELINE
 
            POP HL
@@ -8727,13 +8727,13 @@ PNBS:      EX AF,AF'
 
 SMBW:      LD HL,WORKSPP
            CALL SMBS
-           LD L,>WKENDP
+           LD L,WKENDP\256
            CALL SMBS
-           LD L,>KCURP
+           LD L,KCURP\256
 
 SMBS:      PUSH AF
            XOR (HL)
-           AND 1FH
+           AND &1F
            JR Z,SMBS2
 
            DEC (HL)          ;IF WORKSPACE IS ON PAGE ABOVE, ADJUST
@@ -8753,7 +8753,7 @@ SADJ:      PUSH BC           ;OLD (STILL CORRECT!) NVARS
            LD HL,(BSTKEND)
 
 SADJL:     LD A,(HL)         ;TYPE/PAGE
-           CP 0FFH
+           CP &FF
            JR NZ,SADJ2
 
            POP HL            ;NVARS
@@ -8773,15 +8773,15 @@ SADJ2:     PUSH AF           ;SAVE B BITS 7-5 OF PAGE
            CALL ASSV         ;ADJUST SINGLE "SYS VAR"
            POP HL
            POP AF
-           AND 0E0H
+           AND &E0
            OR (HL)
            LD (HL),A         ;KEEP TYPE BITS 7-5
            INC HL            ;SKIP PAGE
            INC HL
            INC HL            ;SKIP OFFSET
            INC HL            ;SKIP STAT
-           AND 0E0H          ;ISOLATE TYPE BITS
-           CP 40H
+           AND &E0           ;ISOLATE TYPE BITS
+           CP &40
            JR NZ,SADJL       ;JR IF NOT PROC
 
 FPTLP:     LD A,(HL)
@@ -8825,7 +8825,7 @@ SENDLP:    CALL BRKCR        ;STOP IF BREAK PRESSED
 HEAPROOM:  LD HL,(HEAPEND)   ;(4200H TO ABOUT 4A00H)
            ADD HL,BC
            LD A,H
-           CP 40H
+           CP &40
            JR NC,HEAPR2      ;JR IF HEAP NOT EMPTY AFTER ADJUSTMENT
 
            LD HL,(HPST)      ;EMPTY HEAP
@@ -8922,11 +8922,11 @@ NOTFND3H:     JP C,NOTFND3        ;JR IF START POSN TOO FAR UP SEARCH$
 
 INSTBKLP:     CALL CHKHL          ;IF NEEDED, GET HL IN 8000-BFFF AREA
               LD A,D
-              CP 3FH
+              CP &3F
               JR C,MINSR          ;JR IF OK FOR A SEARCH WITHOUT OVERFLOW
 
               PUSH DE             ;LEN >=3F00
-              LD DE,3EFFH
+              LD DE,&3EFF
               CALL MINSR          ;SEARCH 3EFF BYTES
               JR NC,JUNKS         ;IF FOUND, JUNK PREV LEN, NC. BC=POSN
 
@@ -8935,7 +8935,7 @@ INSTBKLP:     CALL CHKHL          ;IF NEEDED, GET HL IN 8000-BFFF AREA
 
               EX DE,HL            ;ELSE A'=T$ LEN
                                   ;DE=S$ PTR, HL=START POSN
-              LD BC,3EFFH
+              LD BC,&3EFF
               ADD HL,BC           ;INCR START POSN FOR NEW SEARCH
               EX (SP),HL          ;HL=PREV. LEN, (SP)=START POSN
               SBC HL,BC
@@ -8965,13 +8965,13 @@ IMLENGTH:  CALL SINSISOBRK
            DW LENGSR         ;SETS  BIT 6,(FLAGS) FOR NUM/STR
            JP Z,VNFERR       ;ERROR IF NOT FOUND IN RUNTIME
 
-           RST 18H
+           RST &18
            CALL EXCBRF       ;INSIST ON A$() OR XXX()
            EX AF,AF'         ;CY IF RUNNING
            BIT 5,C
            JR Z,IMLEN2       ;JR IF NOT NUMERIC ARRAY
 
-           RST 18H
+           RST &18
            CALL EXCBRF       ;INSIST ON E.G. (1,AL() )
            RET NC            ;RET IF SYNTAX TIME
 
@@ -9005,7 +9005,7 @@ IMLEN3:    PUSH BC           ;C=T/L
 ;BC=NO OF ELS. SIMPLE STRINGS HAVE EL LEN OF 1.
 
            LD A,C
-           AND 60H
+           AND &60
            LD A,(HL)
            INC HL
            LD C,(HL)
@@ -9035,7 +9035,7 @@ ASSAR4:    INC HL
            LD D,(HL)
 
 ASSAR5:    LD A,L
-           SUB >MEMVAL+2     ;GET BYTES FROM DIMS TO TEXT
+           SUB (MEMVAL+2)\256 ;GET BYTES FROM DIMS TO TEXT
            LD HL,(MEMVAL)
            ADD A,L
            LD L,A
@@ -9056,7 +9056,7 @@ ASSAR6:    POP AF
            DEC A
            JP Z,STACKHL
 
-IMLERR:    RST 08H
+IMLERR:    RST &08
            DB 30             ;IOOR
 
 ;*******************************************************************************
@@ -9125,7 +9125,7 @@ CIFILSR:   CALL R1OFFCL      ;v2.6
            LD A,(CURCMD)
            LD HL,MODE
            ADD A,(HL)
-           SUB 0EBH+2        ;FILLTOK+2
+           SUB &EB+2         ;FILLTOK+2
            SCF
            CCF               ;NC
            RET NZ            ;RET UNLESS: MODE 2, FATPIX, FILL
@@ -9143,13 +9143,13 @@ CIFISR2:   LD A,H
            JR NZ,THINC2
 
 ;X IS <=00FF
-           CP 80H
+           CP &80
            JR C,THINC3      ;IF X IS <80H, JR, USE L (X LSB) AS X, ADD HL OF 0
 
            JR THINC4
 
 ;X>=0100H
-THINC2:    CP 80H
+THINC2:    CP &80
            JR C,THINC4       ;IF X>017FH, NO JR, USE L AS X, ADD HL OF 0100H
 
 ;X>017FH
@@ -9159,7 +9159,7 @@ THINC3:    LD C,L
 
 ;X IS BETWEEN 80H AND 017FH
 
-THINC4:    LD DE,80H
+THINC4:    LD DE,&80
            LD C,E            ;PRETEND CENTRE X IS 128
            AND A
            SBC HL,DE         ;HL=0-FF=DISP TO ADD TO 80H CENTRE TO GET REAL CRD
@@ -9173,13 +9173,13 @@ THINC5:    LD (TEMPW1),HL
 CRBBFN:    PUSH DE
            PUSH HL
            LD B,A
-           LD DE,672CH       ;2ND BYTE OF RRD/INC L
+           LD DE,&672C       ;2ND BYTE OF RRD/INC L
            DEC C
            JR NZ,CRBB2       ;JR IF MOVE RIGHT
 
-           LD DE,6F2DH       ;2ND BYTE OF RLD/DEC L
+           LD DE,&6F2D       ;2ND BYTE OF RLD/DEC L
 
-CRBB2:     LD A,0EDH         ;1ST BYTE OF RLD OR RRD
+CRBB2:     LD A,&ED          ;1ST BYTE OF RLD OR RRD
            LD HL,CDBUFF
 
 CRBBL:     LD (HL),A
@@ -9190,25 +9190,25 @@ CRBBL:     LD (HL),A
            INC HL
            DJNZ CRBBL
 
-           LD (HL),0C9H      ;"RET"
+           LD (HL),&C9       ;"RET"
            POP HL
            POP DE
            RET
 
 CRTBF:     PUSH BC
            DEC C
-           LD C,0A8H
+           LD C,&A8
            JR NZ,CRTB2       ;JR IF LDD WANTED
 
-           DB 0EH            ;"JR+1"
+           DB &0E            ;"JR+1"
 
 CRTBFI:    PUSH BC
 
-CRTB1:     LD C,0A0H         ;ELSE LDI
+CRTB1:     LD C,&A0          ;ELSE LDI
 
 CRTB2:     PUSH HL
            LD B,A
-           LD A,0EDH
+           LD A,&ED
            LD HL,CDBUFF
 
 CRTBL:     LD (HL),A
@@ -9217,7 +9217,7 @@ CRTBL:     LD (HL),A
            INC HL
            DJNZ CRTBL
 
-           LD (HL),0C9H      ;"RET"
+           LD (HL),&C9       ;"RET"
            POP HL
            POP BC
            RET
@@ -9288,7 +9288,7 @@ DRHLB:     DB DROPEX-DRHLB
            DB SUBN           ;X,Y,SIN(Z/2),FF,FF-1
            DB GRTE0          ;X,Y,SIN(Z/2),FF,1/0 (1 IF FF>=1)
            DB JPTRUE         ;JP IF NOT A STRAIGHT LINE, DRCURV3
-           DB 07H
+           DB &07
 
            DB DROP           ;X,Y,SIN(Z/2)
 
@@ -9300,7 +9300,7 @@ DROPEX:    DB DROP           ;X,Y
 DRCURV3:   DB DUP            ;X,Y,SIN(Z/2),FF,FF
            DB SQR            ;X,Y,SIN(Z/2),FF,SQR FF
            DB ONELIT
-           DB 02H
+           DB &02
            DB SWOP           ;"     "     ,FF,2,SQR FF
            DB DIVN           ;"     "     ,FF,2/SQR FF
            DB RCL5           ;"     "     ,FF,2/SQR FF,Z
@@ -9310,7 +9310,7 @@ DRCURV3:   DB DUP            ;X,Y,SIN(Z/2),FF,FF
            DB EXIT
 
            CALL FPTOA
-           LD B,0FCH
+           LD B,&FC
            JR C,DRCURV4      ;JR IF TOO BIG
 
            AND B             ;A=00-FC
@@ -9395,7 +9395,7 @@ DRCURV4:   PUSH BC           ;ARCS IN B
 
            POP BC
            LD A,(DE)
-           CP 81H
+           CP &81
            JP C,LINEDRAW
 
            DB CALC
@@ -9479,7 +9479,7 @@ LINEDRAW:  CALL R1OFFCL
            DW DRAWFD
            JP TRCURP
 
-           INCLUDE MISC31.SAM      ;CALL, BORDER, ZOOM ETC,
+;          INCLUDE MISC31.SAM      ;CALL, BORDER, ZOOM ETC,
 ;MISC31.SAM -  CALL, BGRAPHICS, KEY, STRM16, NEW
 
 
@@ -9546,9 +9546,12 @@ CRTVAR3:   PUSH DE           ;PTR
            DW CRTVAR4
 
 
-ERVT:      DB 4,"error"
-           DB 3,"lino"
-           DB 3,"stat"
+ERVT:      DB 4
+           DM "error"
+           DB 3
+           DM "lino"
+           DB 3
+           DM "stat"
 
 
 MNINIT:    XOR A
@@ -9563,16 +9566,16 @@ RMPS:      LD BC,CLUTPORT
            OUT (C),A         ;SET COLOUR 0
            LD A,D
            OUT (URPORT),A
-           LD HL,8000H
-           LD DE,8001H
-           LD BC,3FFFH
+           LD HL,&8000
+           LD DE,&8001
+           LD BC,&3FFF
            LD (HL),L
            LDIR              ;CLEAR A PAGE
-           LD HL,8000H
+           LD HL,&8000
            INC B             ;BC=0100
-           LD E,40H
+           LD E,&40
 
-RMCK:      LD (HL),0FFH
+RMCK:      LD (HL),&FF
            LD D,(HL)
            INC D
            JR NZ,RAMEX       ;CHECK ALL BITS CAN BE ONES
@@ -9588,13 +9591,13 @@ RMCK:      LD (HL),0FFH
            JR NZ,RMCK
 
            INC A
-           CP 20H
+           CP &20
            JR C,RMPS
 
-           LD A,0FEH
-           IN A,(0FEH)
+           LD A,&FE
+           IN A,(&FE)
            RRA
-           LD A,10H          ;256K
+           LD A,&10          ;256K
            JR NC,RAMEX       ;FORCE 256K SYSTEM IF SHIFT PRESSED
 
            ADD A,A           ;20H=512K
@@ -9612,16 +9615,16 @@ ATIF:      LD (HL),0         ;'FREE'
            INC HL
            DJNZ ATIF
 
-           SUB 21H
+           SUB &21
            CPL               ;IF PRAMTP WAS 0F, A=11H; IF 1F, A=01
            LD B,A
 
-ATIX:      LD (HL),0FFH      ;'NON-EXISTENT/TERMINATOR'
+ATIX:      LD (HL),&FF       ;'NON-EXISTENT/TERMINATOR'
            INC HL
            DJNZ ATIX         ;FILL REST OF TABLE WITH FF'S
 
            POP HL
-           LD A,40H          ;'IN USE, CONTEXT 0'
+           LD A,&40          ;'IN USE, CONTEXT 0'
            LD B,4            ;PAGES TO RESERVE
 
 ATIU:      LD (HL),A         ;'USED BY CONTEXT A'
@@ -9636,14 +9639,14 @@ ATIU:      LD (HL),A         ;'USED BY CONTEXT A'
            LD L,E
            DEC L             ;HL PTS TO SCREEN PAGES IN ALLOCT
            LD A,L
-           OR 60H            ;SCREEN PAGE=LAST POSSIBLE PAIR, MODE=3, MIDI
+           OR &60            ;SCREEN PAGE=LAST POSSIBLE PAIR, MODE=3, MIDI
                              ;BIT LOW (INACTIVE)
            LD (FISCRNP),A
-           LD A,0C0H         ;'SCREEN'
+           LD A,&C0          ;'SCREEN'
            LD (HL),A
            INC HL
            LD (HL),A
-           LD HL,0BFFFH
+           LD HL,&BFFF
            LD (RAMTOP),HL
 
            LD HL,KSRC
@@ -9656,10 +9659,10 @@ ATIU:      LD (HL),A         ;'USED BY CONTEXT A'
            LD HL,KTAB+238    ;DEST FOR BRIGHT CC
            CALL PBSL         ;B SHOULD BE ZERO ON ENTRY. EXITS UNCHANGED
 
-           LD HL,5CB6H+31+4000H
+           LD HL,&5CB6+31+&4000
            LD (PROG),HL
 
-           LD DE,5CB6H
+           LD DE,&5CB6
            LD (CHANS),DE
            LD HL,CHANTAB
            LD C,31
@@ -9706,7 +9709,7 @@ NEW2:      LD HL,SCLIST
 
 SCLI:      INC HL
            LD (HL),A
-           LD A,0FFH         ;'CLOSED'
+           LD A,&FF          ;'CLOSED'
            DJNZ SCLI
 
            LD A,(PRAMTP)
@@ -9716,7 +9719,7 @@ SCLI:      INC HL
            LD H,ALLOCT/256
 
 CSPL:      LD A,(HL)
-           CP 0C0H
+           CP &C0
            JR NZ,DCSP        ;JR IF NOT A SCREEN PAGE
 
            LD (HL),B         ;CLOSE SCREEN PAGE
@@ -9744,13 +9747,13 @@ CLSTL:     LD (HL),C
            DJNZ CLSTL
 
            CALL ADDRPROG
-           LD (HL),0FFH      ;PROGRAM TERMINATOR
+           LD (HL),&FF       ;PROGRAM TERMINATOR
            INC HL
            LD (NVARS),HL
            LD (NVARSP),A
            LD (ELINEP),A
            CALL RESTOREZ
-           LD HL,0321H
+           LD HL,&0321
            LD (REPDEL),HL    ;REPDEL=33, REPPER=3
            LD HL,MEMVAL
            LD (MEM),HL
@@ -9797,10 +9800,10 @@ RBOWL:     LD (HL),B
            CP 166
            JR C,RBOWL
 
-           LD (HL),0FFH
+           LD (HL),&FF
 
-           RST 08H
-           DB 50H            ;COPYRIGHT MSG
+           RST &08
+           DB &50            ;COPYRIGHT MSG
 
 
 ;UPACK - CALLED BY INITIALIZATION ROUTINE
@@ -9877,19 +9880,19 @@ CLSHS:     CALL SABORTER
 ;CALLED BY NEW
 
 CLSHS2:    CALL STREAMFE     ;'S'
-           LD BC,0510H
+           LD BC,&0510
 
 CLHSL:     LD A,B
            ADD A,C
-           RST 10H           ;PRINT CHR$ 15H/14H/13H/12H/11H
+           RST &10           ;PRINT CHR$ 15H/14H/13H/12H/11H
            XOR A
-           RST 10H           ;OVER/INVERSE/BRIGHT/FLASH/PAPER 0
+           RST &10           ;OVER/INVERSE/BRIGHT/FLASH/PAPER 0
            DJNZ CLHSL
 
            LD A,C
-           RST 10H           ;CHR$ 10H - PEN
+           RST &10           ;CHR$ 10H - PEN
            LD A,7
-           RST 10H           ;PEN 7
+           RST &10           ;PEN 7
            CALL PER3         ;COPY TEMP EFFECTS OF COLOUR CODES TO PERMS.
  ;         CALL ZBCI
 ;          JP MCLS
@@ -9923,7 +9926,7 @@ COLOUR:      CALL CRCOLON
 
              CALL CHKEND
 
-COLINIT:     LD A,0FFH
+COLINIT:     LD A,&FF
              LD (LINICOLS),A          ;CLEAR INTERRUPT COL CHNG LIST
              LD DE,PALTAB
              CALL COLINIT1            ;DO IT TWICE
@@ -9953,7 +9956,7 @@ COLOUR1:     CALL EXPT1NUM             ;I
 
              CALL COLATSR
              PUSH AF                   ;LINE
-             LD DE,1000H+23            ;LIMIT OF 16, INKVALERR
+             LD DE,&1000+23            ;LIMIT OF 16, INKVALERR
              CALL LIMBYTE              ;I
              POP DE                    ;D=LINE
              LD E,A                    ;E=I
@@ -9989,7 +9992,7 @@ COLDEL2:     LD A,(HL)
              EI                        ;DELETED ENTRY, NO PROBLEM. IF PTS TO
              RET                       ;
 
-INKVALERR:   RST 08H
+INKVALERR:   RST &08
              DB 23                     ;'Invalid colour'
 
 COLOUR5:     CALL EXPTCNUM             ;,C OF 'PALETTE I,C....'
@@ -10006,10 +10009,10 @@ COLOUR5:     CALL EXPTCNUM             ;,C OF 'PALETTE I,C....'
 
 COLSING:     CALL CHKEND
 
-             LD A,0FFH
+             LD A,&FF
 
 COLOUR10:    PUSH AF                   ;NUL LINE
-             LD DE,8000H+24            ;LIMIT TO <128
+             LD DE,&8000+24            ;LIMIT TO <128
              CALL LIMBYTE              ;GET SINGLE COLOUR
              PUSH AF                   ;STACK IT AS THE 'SECOND' COLOUR TOO
              JR COLOUR2                ;FPCS=I, (SP)=COL, (SP+2)=LINE, A=COL
@@ -10020,7 +10023,7 @@ COLOURFL:    CALL SEXPT1NUM            ;SECOND COLOUR
 
              CALL CHKEND
 
-             LD A,0FFH                 ;NUL LINE
+             LD A,&FF                  ;NUL LINE
              PUSH AF
              JR COLOUR15               ;FPCS=I,B,C. (SP)=LINE
 
@@ -10029,14 +10032,14 @@ COLATL:      CALL SSYNTAX6             ;LINE
 COLATL2:     CALL COLATSR
              PUSH AF                   ;LINE
 
-COLOUR15:    LD DE,8000H+24            ;LIMIT TO <128
+COLOUR15:    LD DE,&8000+24            ;LIMIT TO <128
              CALL LIMBYTE              ;GET SECOND COLOUR TO A
 
              PUSH AF                   ;SECOND COLOUR
              CALL LIMBYTE              ;FIRST COLOUR
 
 COLOUR2:     PUSH AF                   ;FIRST COLOUR
-             LD DE,1000H+23            ;LIMIT TO <16
+             LD DE,&1000+23            ;LIMIT TO <16
              CALL LIMBYTE              ;PALETTE ENTRY (I)
 
              LD E,A                    ;E=I
@@ -10047,7 +10050,7 @@ COLOUR2:     PUSH AF                   ;FIRST COLOUR
 
 ;A=LINE (FF IF NONE), LETTE ENTRY
 
-JPALET:      CP 0FFH
+JPALET:      CP &FF
              JR NZ,COLRLINE
 
              LD HL,PALTAB              ;PT TO PALETTE TABLE
@@ -10059,7 +10062,7 @@ JPALET:      CP 0FFH
              LD (HL),C                 ;SECOND COLOUR (OFTEN THE SAME)
              RET
 
-COLFULERR:   RST 08H
+COLFULERR:   RST &08
              DB 25                     ;'Too many palette changes'
 
 COLRLINE:    LD HL,LINICOLS
@@ -10097,7 +10100,7 @@ COLRL3:      DEC HL
              INC BC
              INC BC
              LD A,B
-             ADD A,0FEH
+             ADD A,&FE
              JR C,COLFULERR            ;ERROR IF LIST WITH NEW ENTRY WOULD BE
                                        ;MORE THAN 01FFH LONG
              POP DE                    ;LOCN FOR NEW ENTRY
@@ -10164,7 +10167,7 @@ COLATSR:     DB CALC
              SUB 1
              RET NC                    ;RET UNLESS A WAS ZERO
 
-             RST 08H
+             RST &08
              DB 30                     ;IOOR
                                        ;COLOUR CHANGE AT LINE 175 NOT POS.
                                        ;0-190 FOR ORIG 174 TO -16
@@ -10172,7 +10175,7 @@ COLATSR:     DB CALC
                                        ;CHANGE AT END OF SCAN 1.
 
                                  ;RECORD, FATPIX, CSIZE, WINDOW,
-           INCLUDE MISC32.SAM    ;BEEP
+;          INCLUDE MISC32.SAM    ;BEEP
 ;MISC32.SAM
 
 BEEP:      CALL SYNTAX8
@@ -10194,30 +10197,30 @@ BEEP:      CALL SYNTAX8
            DB EXIT
 
            LD A,(HL)         ;L EXPONENT
-           CP 85H            ;**
+           CP &85            ;**
            JR C,BEEP2        ;ALLOW DURATION UP TO 16 SECS
 
-           RST 08H
+           RST &08
            DB 50             ;'note too long'
 
 BEEP2:     LD BC,-5
            ADD HL,BC
            LD A,(HL)         ;F EXPONENT
-           CP 84H
+           CP &84
            JR C,INVNOTE
 
-           CP 8FH
+           CP &8F
            JR C,BEEP3        ;ALLOW FREQUENCIES OF 8Hz TO 16KHz.
 
-INVNOTE:   RST 08H
+INVNOTE:   RST &08
            DB 49             ;'Invalid note'
 
 BEEP3:     DB CALC           ;F,F,L
            DB MULT           ;F,F*L=CYCLES
            DB SWOP           ;CY,F
            DB FIVELIT
-           DB 93H,37H
-           DB 1BH,0,0        ;CY,F,375000=8T UNITS IN A 1HZ HALF-CYCLE
+           DB &93,&37
+           DB &1B,0,0        ;CY,F,375000=8T UNITS IN A 1HZ HALF-CYCLE
            DB SWOP           ;CY,375000,F
            DB DIVN           ;F,375000/F=8T UNITS PER HALF-CYCLE
            DB ONELIT
@@ -10253,7 +10256,7 @@ BEEPER2:   PUSH BC
            POP IX            ;IX IS LOOPING ADDR
            LD A,(BORDCOL)    ;BITS=STI01GRB
                              ;(SOFF/THRO MIDI/INTENSITY/0/MIC/GRB)
-           OR 18H            ;SPKR BIT HI (ON), MIC BIT HI (OFF)
+           OR &18            ;SPKR BIT HI (ON), MIC BIT HI (OFF)
            JR BPLENT         ;JUMP INTO LOOP - PULSE SPEAKER OFF
 
 BEEPLP:    LD B,B
@@ -10271,8 +10274,8 @@ BPTMLP:    DEC B
            DEC C
            JP NZ,BPTMLP
 
-BPLENT:    XOR 10H           ;REVERSE BIT 4
-           OUT (0FEH),A      ;PULSE SPEAKER
+BPLENT:    XOR &10           ;REVERSE BIT 4
+           OUT (&FE),A       ;PULSE SPEAKER
            LD B,A            ;SAVE A FOR LATER
            LD C,H
            BIT 4,A
@@ -10370,7 +10373,7 @@ PWLP:      LD A,(DE)
 
 BGRAPHICS: CALL SYNTAX6
 
-           LD DE,0200H+30    ;LIMIT TO <2 OR IOOR
+           LD DE,&0200+30    ;LIMIT TO <2 OR IOOR
            CALL LIMBYTE
 
            DEC A
@@ -10399,9 +10402,9 @@ KEY:       CALL SYNTAX8
 ;DEVICE T45 SETS SPEED=45
 
 SLDEVICE:  CALL GETALPH
-           AND 0DFH          ;FORCE UPPER CASE
+           AND &DF           ;FORCE UPPER CASE
            PUSH AF
-           RST 20H
+           RST &20
            CALL FETCHNUM     ;NUMBER OR USE 0
            POP DE            ;LETTER
            CALL CHKEND
@@ -10515,7 +10518,7 @@ COOVER:       LD C,1                 ;MASK FOR BIT 0 - OVER
 COINOVC:      LD HL,PFLAGT
               JP COCHNG              ;ADD MODIFIED PARAM TO PFLAG
 
-COBRIGHT:     LD C,40H               ;MASK FOR BIT 6 - BRIGHT
+COBRIGHT:     LD C,&40               ;MASK FOR BIT 6 - BRIGHT
               LD A,(MODE)
               CP 2
               LD A,D                 ;PARAM
@@ -10530,16 +10533,16 @@ COBRIGHT:     LD C,40H               ;MASK FOR BIT 6 - BRIGHT
               LD A,(M23INKT)
               JR Z,COBRI1            ;JR IF BRIGHT 0
 
-              OR 88H                 ;ADD 8 TO INK
+              OR &88                 ;ADD 8 TO INK
               PUSH AF
               LD A,E
-              OR 88H                 ;AND PAPER, IF <8
+              OR &88                 ;AND PAPER, IF <8
               JR COBRI15
 
-COBRI1:       AND 77H
+COBRI1:       AND &77
               PUSH AF
               LD A,E
-              AND 77H
+              AND &77
 
 COBRI15:      LD (M23PAPT),A
               POP AF
@@ -10549,7 +10552,7 @@ COBRI15:      LD (M23PAPT),A
 COBRI2:       RRCA                   ;PARAM 0/1 ENDS IN BIT 6...
               JR COBRFLC
 
-COFLASH:      LD C,80H               ;MASK FOR BIT 7 - FLASH
+COFLASH:      LD C,&80               ;MASK FOR BIT 7 - FLASH
               LD A,D                 ;PARAM
 
 COBRFLC:      RRCA                   ;PARAM 0/1 TO BIT 7 (OR 6 IF FLASH)
@@ -10567,7 +10570,7 @@ COBFC2:       CP 8
               CP 2
               JR C,COFBOK
 
-INVCOLERR:    RST 08H
+INVCOLERR:    RST &08
               DB 23
 
 COFBOK:       LD HL,ATTRT
@@ -10582,7 +10585,7 @@ COFBOK:       LD HL,ATTRT
 COINK:        LD C,7                 ;MASK FOR INK
               JR CINKPAPC
 
-COPAPER:      LD C,38H               ;MASK FOR PAPER
+COPAPER:      LD C,&38               ;MASK FOR PAPER
               LD A,D
               RLCA
               RLCA
@@ -10613,7 +10616,7 @@ CONFBRI:      LD A,(MODE)
               RLCA
               RLCA                   ;BITS 5,4 AND 1,0 TO 7,6 AND 4,3
               XOR E
-              AND 0CCH               ;KEEP BITS 7,6,4,3 OF A
+              AND &CC                ;KEEP BITS 7,6,4,3 OF A
               XOR E                  ;A=4 COPIES OF PARAM BITS 1,0 IF MODE 2
                                      ;WHICH ONLY HAS 4 INKS
               RLCA                   ;CORRECT BIT SWOP
@@ -10640,7 +10643,7 @@ CINKPAP0:     CP 18
                                      ;JUST MASKT
               OR   C                 ;MAKE INK OR PAPER WHITE
               CPL                    ;THEN BLACK. FLIP OTHER BITS
-              AND  24H               ;00 100 100
+              AND  &24               ;00 100 100
               JR Z,CINKPAP2          ;JR IF INK/PAPER WAS LIGHT
 
               LD   A,C               ;USE WHITE INK OR PAPER TO CONTRAST
@@ -10653,7 +10656,7 @@ CINKPAP2:     LD A,B
               CALL COCHNGP           ;CHANGE MASKT
               RLCA
               RLCA
-              AND 50H
+              AND &50
               LD C,A
               LD A,16                ;SO GET CARRY FOR INK/PAPER 17
                                      ;THEN ALTER PFLAGT
@@ -10671,7 +10674,7 @@ COCHNG:       XOR (HL)
 
 BORDER:    CALL SYNTAX6
 
-           LD DE,1000H+23    ;LIMIT TO <16 OR INVALID COLOUR
+           LD DE,&1000+23    ;LIMIT TO <16 OR INVALID COLOUR
            CALL LIMBYTE      ;A=BORDER
 
 SETBORD:   LD C,A
@@ -10680,13 +10683,13 @@ SETBORD:   LD C,A
            RLCA
            LD B,A
            XOR C
-           AND 20H           ;USE BIT 5 FROM A
+           AND &20           ;USE BIT 5 FROM A
            XOR C
-           OR 08H            ;MIC OFF
+           OR &08            ;MIC OFF
            EX DE,HL
            LD HL,BORDCOL
            XOR (HL)
-           AND 3FH           ;USE BITS 7 AND 6 (SOFF/THRO) FROM SYS VAR
+           AND &3F           ;USE BITS 7 AND 6 (SOFF/THRO) FROM SYS VAR
            XOR (HL)
            LD (HL),A         ;USED BY SAVE/LOAD TO RESTORE BORDER, AND BEEP
                              ;BIT 7=SOFF STATUS
@@ -10698,8 +10701,8 @@ SETBORD:   LD C,A
            BIT 5,A           ;IS BORDER COLOUR LIGHT?
            JR NZ,BORD1       ;JR IF SO - INK IS BLACK
 
-           LD H,0FFH         ;COLOUR 15/3 (WHITE) FOR LS INK (MODE 3/2)
-           OR 07H            ;AND BORDER COLOUR
+           LD H,&FF          ;COLOUR 15/3 (WHITE) FOR LS INK (MODE 3/2)
+           OR &07            ;AND BORDER COLOUR
 
 BORD1:     LD (BORDCR),A
            LD A,L
@@ -10717,7 +10720,7 @@ BORD1:     LD (BORDCR),A
            INC A
            JR Z,BORD2             ;USE INK 0 IF PAPER FF
 
-           LD A,0FFH              ;(USUALLY) WHITE INK OTHERWISE
+           LD A,&FF               ;(USUALLY) WHITE INK OTHERWISE
 
 BORD2:     LD H,A
 
@@ -10733,7 +10736,7 @@ M3TO2:     LD A,L
            RLCA
            RLCA                   ;BITS 5,4 AND 1,0 TO 7,6 AND 4,3
            XOR L
-           AND 0CCH               ;KEEP BITS 7,6,4,3 OF A
+           AND &CC                ;KEEP BITS 7,6,4,3 OF A
            XOR L                  ;A=4 COPIES OF PARAM BITS 1,0 IF MODE 2
            RLCA                   ;CORRECT BIT SWOP
            LD L,A
@@ -10792,7 +10795,7 @@ ALLWIND:   CALL CHKEND
            LD L,H            ;L=RHS
            JR SETWIND
 
-WDERR:     RST 08H
+WDERR:     RST &08
            DB 54             ;'Invalid WINDOW'
 
 
@@ -10808,7 +10811,7 @@ OUT:       CALL SYNTAX8
 
 STOP:      CALL CHKEND
 
-           RST 08H
+           RST &08
            DB 16             ;'STOP statement'
 
 
@@ -10826,26 +10829,26 @@ RANDOM1:   LD (SEED),HL
 
                                  ;ON ERROR, FINDER, MNINIT, PALETTE, BLOCKS,
                                  ;KEY, DEVICE, PAUSE, COITEM2
-           INCLUDE SCRFN.SAM      ;COPY, SCREEN$, LIST, SPACES, EDPTR2
+;          INCLUDE SCRFN.SAM      ;COPY, SCREEN$, LIST, SPACES, EDPTR2
 ;SCRFN.SAM - TEXT/GRAPHICS COPY, SCREEN$ FUNCTION, ATTR FN, POINT, BORDER,
 ;LOOK SAM, WINDOW, ZAP ETC.
 
 ;MAIN COPY ROUTINE:
 
-COPY:      CP 0FFH
+COPY:      CP &FF
            JR NZ,GRCOPY
 
 ;TEXT COPY
 
-           RST 20H           ;SKIP 0FFH
+           RST &20           ;SKIP 0FFH
            CP CHRSTOK
            JP NZ,NONSENSE
 
-           RST 20H
+           RST &20
 
 GRCOPY:    CALL CHKEND
 
-JGCOPY:    DB 3EH            ;'LD A,0AFH' **
+JGCOPY:    DB &3E            ;'LD A,0AFH' **
 
 JTCOPY:    XOR A
 
@@ -10903,7 +10906,7 @@ IMSCSR:    LD HL,DEVICE
            POP AF
            JR NC,SCBMCH      ;JR IF NOT 6-PIX - BUFFER OK
 
-           LD BC,087EH       ;8 BYTES TO ROTATE BY 1 PIX LEFT OR RIGHT FOR
+           LD BC,&087E       ;8 BYTES TO ROTATE BY 1 PIX LEFT OR RIGHT FOR
                              ;CENTRAL POSITION, C=MASK TO TRIM LHS AND RHS BITS
            LD HL,SCRNBUF
            JR Z,SC6EAL       ;JR IF EVEN COLUMN
@@ -10929,7 +10932,7 @@ SC6EAL:    LD A,(HL)
 ;MODES 0 AND 1 DO NOT NEED COMPRESSION OF SCRN CHAR DATA - BUT TRANSFER IT
 
 SCM01:     POP AF            ;JUNK FLAGS FOR 6-PIX
-           LD BC,0800H       ;BYTES TO DO/NO INVERSE
+           LD BC,&0800       ;BYTES TO DO/NO INVERSE
            CALL SREAD
            RLA
            JR NC,SCM01L
@@ -10982,7 +10985,7 @@ SCREENSR:  LD B,A
            INC HL
            INC HL            ;PT HL TO BYTE 3 OF CHAR GEN. CHARACTER
            LD DE,8           ;FOR STEPPING TO NEXT CHAR
-           DB 0FEH           ;'JR+1'
+           DB &FE            ;'JR+1'
 
 SCREENLP:  ADD HL,DE
            CP (HL)           ;CHECK BYTE 3 FOR MATCH
@@ -11035,7 +11038,7 @@ LSTR1:     CALL SPACAN
 LSTLNL:    CALL OUTLINE
            RET C             ;RET IF HIT END OF PROG
 
-           RST 10H           ;PRINT 0DH
+           RST &10           ;PRINT 0DH
            CALL R1OFRD
            LD B,A
            CALL CHKHL        ;**
@@ -11051,7 +11054,7 @@ LSTLNL:    CALL OUTLINE
            JR NC,LSTLNL      ;LOOP UNTIL PAST LAST LINE ASKED FOR ('LAST LINE'=
                              ;EPPC IF AUTO-LIST)
            LD A,(TVFLAG)
-           AND 10H
+           AND &10
            RET Z             ;RET IF NOT AN AUTO-LIST, ELSE FILL REST OF SCREEN
 
            LD A,(WINDBOT)
@@ -11096,7 +11099,7 @@ OUTLN2:    LD (BCREG),A      ;1=CURRENT LINE HAS BEEN PRINTED
            LD E,A
            LD A,(SPOSNU+1)   ;LINE
            SUB E             ;GET LINE REL. TO WINDOW
-           ADD A,>LPT
+           ADD A,LPT\256
            LD E,A
            LD D,LPT/256
            LD A,D
@@ -11119,7 +11122,7 @@ OUTLN25:   EX DE,HL
            JR OUTLN4
 
 OUTLN3:    LD A," "
-           RST 10H           ;PRINT SPACE (ALSO SETS 'NO LEADING SPACE')
+           RST &10           ;PRINT SPACE (ALSO SETS 'NO LEADING SPACE')
 
 OUTLN4:    XOR A
            LD (NXTHSPCS),A
@@ -11143,7 +11146,7 @@ OUTLNLP:   LD HL,(XPTR)
            DW RDCN           ;=LD A,(HL): CALL NUMBER, WITH ROM1 OFF
            LD (LSPTR),HL     ;LINE SCAN PTR - USED BY CUOP O/P ROUTINE
            INC HL
-           CP 0DH
+           CP &0D
            RET Z
 
            EX DE,HL          ;DE=LINE PTR
@@ -11163,7 +11166,7 @@ OUTLNLP:   LD HL,(XPTR)
            JR C,OUTCH3       ;JR IF ':' IS INSIDE QUOTES
 
            LD A,(FLAGX)
-           AND 20H
+           AND &20
            LD A,H
            JR NZ,OUTCH3      ;JR IF INPUT MODE
 
@@ -11176,16 +11179,16 @@ OUTLNLP:   LD HL,(XPTR)
            LD (INDOPFG),A    ;NO INDENTED O/P SO TAB FILLING LINE AVOIDS INDENT
            LD A,(DEVICE)
            DEC A
-           LD A,0DH
+           LD A,&0D
            JR NZ,TABS2      ;JR IF NOT LOWER SCREEN
 
-           LD A,17H          ;TAB
-           RST 10H
+           LD A,&17          ;TAB
+           RST &10
            XOR A
-           RST 10H
+           RST &10
            XOR A
 
-TABS2:     RST 10H
+TABS2:     RST &10
            LD B,6
            CALL OPBSP
            POP AF
@@ -11197,13 +11200,13 @@ TABS2:     RST 10H
            CALL SPACES       ;SET SPACES, O/P CURRENT SPACES
            JR OUTLNLP
 
-OUTCH2:    CP 22H
+OUTCH2:    CP &22
            JR NZ,OUTCH3
 
            LD HL,INQUFG
            INC (HL)          ;FLIP BIT 0 (INSIDE/OUTSIDE QUOTES FLAG)
 
-OUTCH3:    RST 10H
+OUTCH3:    RST &10
            JR OUTLNLP
 
 
@@ -11267,29 +11270,29 @@ SPACES:    LD HL,NXTSPCS     ;POINT TO 'NEXT-SPACES' VAR.
            LD (HL),B         ;CURRENT THEN SPACES=NEXT THEN SPACES
            POP HL            ;PTR TO NEXT-SPACES
 
-           CP 0D4H           ;DOTOK
+           CP &D4            ;DOTOK
            JR Z,INCSPCS
 
-           CP 0D7H           ;LIFTOK
+           CP &D7            ;LIFTOK
            JR Z,INCSPCS
 
-           CP 0CAH           ;DEFPROCTOK
+           CP &CA            ;DEFPROCTOK
            JR Z,INCSPCS
 
-           CP 0C0H           ;FORTOK
+           CP &C0            ;FORTOK
            JR Z,INCSPCS      ;THESE CMDS NEED NEXT SP=NEXT SP+INDENT
                              ;(INDENT FROM NEXT STATEMENT ONWARDS)
-           CP 0D5H           ;LOOPTOK
+           CP &D5            ;LOOPTOK
            JR Z,DECSPCS
 
-           CP 0CBH           ;ENDPROCTOK
+           CP &CB            ;ENDPROCTOK
            JR Z,DECSPCS
 
-           CP 0DBH           ;ENDIFTOK
+           CP &DB            ;ENDIFTOK
            JR Z,DECSPCS      ;THESE CMDS (AND NEXT) NEED TO CANCEL INDENT FOR
                              ;CURRENT AND LATER STATEMENTS.
 
-           CP 0C1H           ;NEXTTOK
+           CP &C1            ;NEXTTOK
            JR NZ,SPACES2
 
 DECSPCS:   CALL SPACESR      ;CURRENT=CURRENT-INDENT
@@ -11298,38 +11301,38 @@ DECSPCS:   CALL SPACESR      ;CURRENT=CURRENT-INDENT
            LD (HL),B         ;NEXT SPACES=CURRENT
            JR SPACES4
 
-SPACES2:   CP 0D6H           ;EXITIFTOK
+SPACES2:   CP &D6            ;EXITIFTOK
            JR Z,SPACES3
 
-           CP 0D9H           ;LELSETOK
+           CP &D9            ;LELSETOK
            JR Z,SPACES3
 
-           CP 0D3H           ;LOOPIFTOK
+           CP &D3            ;LOOPIFTOK
            JR Z,SPACES3      ;LOOP IF, LELSE AND EXIT IF CANCEL INDENT FOR
                              ;CURRENT STAT ONLY.
            INC HL
            INC HL            ;PT TO SPACES THAT WILL CANCEL AT LINE END (SIF)
-           CP 0DAH           ;ELSETOK
+           CP &DA            ;ELSETOK
            JR NZ,SPACES35    ;SHORT ELSE CANCELS SOME OF THEM, AS DOES 'ON'
 
 SPACES3:   CALL SPACESR
            JR SPACES4
 
-SPACES35:  CP 0D8H           ;SIFTOK
+SPACES35:  CP &D8            ;SIFTOK
            JR Z,INCSPCS      ;SHORT IF INDENTS FOR LATER STATEMENTS, THIS LINE
 
-           CP 0DEH           ;ONTOK. AS DOES 'ON'
+           CP &DE            ;ONTOK. AS DOES 'ON'
            JR NZ,SPACES4
 
 INCSPCS:   LD A,(LISTFLG)
            ADD A,(HL)
            LD (HL),A
-           DB 0FEH           ;"JR+3" (CP 3EH: LD B,FEH)
+           DB &FE            ;"JR+3" (CP 3EH: LD B,FEH)
 
 ;CALLED FROM MAIN PRINT ROUTINE WHEN LINE FULL
 
 INDOPEN:   LD A,6
-           DB 0FEH           ;'JR+1'
+           DB &FE            ;'JR+1'
 
 SPACES4:   XOR A
            LD HL,CURSPCS
@@ -11362,7 +11365,7 @@ SPACESR:   INC HL
            LD (HL),A
            RET NC
 
-           LD (HL),00H
+           LD (HL),&00
            RET
 
 
@@ -11387,11 +11390,11 @@ EDPTR2:    CALL TEMPS
            EX DE,HL          ;HL=LINE START
            LD BC,OUTLN25
            LD A,(FLAGX)
-           AND 20H
+           AND &20
            JR NZ,EDIM        ;JR IF INPUT MODE - NO INDENT
 
            LD A,(HL)
-           CP 0DH
+           CP &0D
            JR Z,EDCOP        ;JR IF LINE EMPTY ** BUG FIX
 
            CALL SPACAN
@@ -11426,7 +11429,7 @@ EDBL:      POP BC            ;OLDPOS
 
 EDPE:      CALL WARNBZ
            CALL POFETCH      ;FOR OLDPOS
-           DB 21H            ;'JR+2'
+           DB &21            ;'JR+2'
 
 EDBE:      POP DE            ;LAST END-OF-LINE POSN
            POP HL            ;ERROR HANDLER ADDR
@@ -11478,7 +11481,7 @@ OPCURSOR:  LD HL,(KCUR)
            LD H,A
            LD A,(KCURP)
            XOR H
-           AND 1FH
+           AND &1F
            RET NZ            ;**
 
            LD HL,(SPOSNL)
@@ -11489,7 +11492,7 @@ OPCUR2:    LD HL,(KURV)
 
            LD HL,(KURCHAR)
            LD A,(FLAGS2)
-           AND 08H
+           AND &08
            LD A,L
            JR Z,PRINVERT     ;JR IF CAPS LOCK OFF
 
@@ -11501,7 +11504,7 @@ OPCUR2:    LD HL,(KURV)
 PRLCU:     LD A,(SPOSNU+1)
            LD (LNPTR),A      ;STORE LINE NO. WITH CURSOR
            LD A,(LNCUR)
-           DB 0FEH           ;"JR+2" (CP 3EH: CCF). PRINT INVERSE '>'
+           DB &FE            ;"JR+2" (CP 3EH: CCF). PRINT INVERSE '>'
 
 PRFLQUERY: LD A,"?"
 
@@ -11521,7 +11524,7 @@ PRINVERT:  LD B,A
            PUSH AF
            LD A,(BGFLG)
            PUSH AF
-           LD A,0FFH
+           LD A,&FF
            LD (INQUFG),A     ;'IN QUOTES' SO CURSORS CAN BE UDGS
            LD (INVERT),A
            LD (BGFLG),A
@@ -11555,12 +11558,12 @@ PRNUMB1:   LD E,0            ;NO LEADING SPACES
 
            LD C,A
            LD B,A
-           DB 22H            ;"JR+2". NUMBERS >=FF00 PRINT AS 0 (EG ELINE)
+           DB &22            ;"JR+2". NUMBERS >=FF00 PRINT AS 0 (EG ELINE)
 
 ;PRINT INTEGER IN BC, PADDED TO 5 CHARS WITH LEADING SPACES. HL IS SAVED.
 ;USED FOR LINE NUMS IN LISTINGS. USES BC, DE, AF.
 
-PRNUMB2:   LD E,20H          ;LEADING SPACES
+PRNUMB2:   LD E,&20          ;LEADING SPACES
 
 PRNUMBC:   PUSH HL
            PUSH BC           ;NUMBER
@@ -11586,10 +11589,10 @@ PRNUILP:   INC A
            DEC A             ;A=DIGIT FOR 1000'S, 100'S ETC.
            JR Z,PRNTNO2      ;LEAVE E ALONE IF IT'S A ZERO DIGIT
 
-PRNTNO1:   LD E,30H          ;AFTER A NON-ZERO DIGIT USE '0' FOR ZERO, RATHER
+PRNTNO1:   LD E,&30          ;AFTER A NON-ZERO DIGIT USE '0' FOR ZERO, RATHER
                              ;THAN ' ' OR ''.
 PRNTNO2:   ADD A,E
-           CALL NZ,0010H     ;CALL UNLESS LEADING SPACES SUPPRESSED.
+           CALL NZ,&0010     ;CALL UNLESS LEADING SPACES SUPPRESSED.
            EX (SP),HL        ;HL=TABLE PTR
            INC C
            DEC C
@@ -11602,7 +11605,7 @@ PRNTNO2:   ADD A,E
                                  ;OPCURSOR, PRLCU, PRINVERT, STENTS, PRAREG,
                                  ;PRNUMB
 
-           INCLUDE TEXT.SAM       ;TABLES, MSGS, KEYWORDS, CMDADDRT, CHARSET
+;          INCLUDE TEXT.SAM       ;TABLES, MSGS, KEYWORDS, CMDADDRT, CHARSET
 ;TEXT.SAM - ERROR MESSAGES, KEYWORDS, MSGS, TABLES, CHARSET ETC
 
 ;REPORTS GENERATED BY E.G. RST 08H: DB 0 FOR OK
@@ -11611,213 +11614,403 @@ PRNTNO2:   ADD A,E
 ;UMVAL IS LOADED INTO UMSGS SYS VAR AT INIT.
 UMVAL:
 
-  DB "   MILES GORDON TECHNOLOGY PLC  "
-  DB "     ",127," 1990  SAM Cou","p"+80H        ;0
-  DB "scroll","?"+80H                            ;1
-  DC " "                                 ;2 NOT USED
-  DB "St",CAR,"t tape and then press a ke","y"+80H    ;3
-  DB "Basic:"," "+80H                            ;4
-  DB "Nu",CME,"ric",ARRAY+80H                      ;5
-  DB STRING,ARRAY+80H                       ;6
-  DB "Co",CDE,":"," "+80H                             ;7
-  DB "S",CREEN,":"," "+80H                       ;8
+  DM "   MILES GORDON TECHNOLOGY PLC  "
+  DM "     "
+  DB 127
+  DM " 1990  SAM Cou"
+  DB "p"+&80  ;0
+
+  DM "scroll"
+  DB "?"+&80  ;1
+
+  DB " "+&80  ;2 NOT USED
+
+  DM "St"
+  DB CAR
+  DM "t tape and then press a ke"
+  DB "y"+&80  ;3
+
+  DM "Basic:"
+  DB " "+&80  ;4
+
+  DM "Nu"
+  DB CME
+  DM "ric"
+  DB ARRAY+&80  ;5
+
+  DB STRING,ARRAY+&80  ;6
+
+  DM "Co"
+  DB CDE,":"," "+&80  ;7
+
+  DB "S",CREEN,":"," "+&80  ;8
 
 ;ERRMVAL IS LOADED INTO ERRMSGS SYS VAR AT INIT.
 ERRMVAL:
 
-  DB "O","K"+80H                              ;0
-  DB "Out",SOFS,CME,"mor","y"+80H               ;1
-  DB SNOTS,"foun","d"+80H                     ;2
-  DB "DATA has all been rea","d"+80H          ;3
-  DB "Subscript wron","g"+80H                 ;4
-  DB CNXT,WITHOUT,"FO","R"+80H                ;5
-  DB "FOR",WITHOUT,CNXT+80H                ;6
-  DB "FN",WITHOUT,"DEF F","N"+80H             ;7
-  DB "RETURN",WITHOUT,"GOSU","B"+80H          ;8
-  DB MISSING,CLOOP+80H                    ;9
-  DB CLOOP,WITHOUT,"D","O"+80H               ;10
-  DB NO,"POP dat","a"+80H                     ;11
-  DB MISSING,"DEF",CPROC+80H                ;12
-  DB NO,"END",CPROC+80H                     ;13
-  DB BREAK,"- CONTINUE ",CTO," repea","t"+80H      ;14
-  DB BREAK,IN,CTO," progra","m"+80H              ;15
-  DB CSTOP,"s",TATEMENT+80H                  ;16
-  DB CSTOP,IN," INPU","T"+80H                   ;17
-  DB INVALID,FILE,SNAME+80H              ;18
-  DB "Load",IN,"g",ERROR+80H                   ;19
-  DB INVALID,CDE,"vic","e"+80H                  ;20
-  DB INVALID,"s",TREAM," n",UMBER+80H      ;21
-  DB "End",SOFS,FILE+80H                 ;22
-  DB INVALID,CLOUR+80H                  ;23
-  DB INVALID,PALET,CLOUR+80H            ;24
-  DB TOOMANY,PALET,"change","s"+80H       ;25
-  DB "P",CAR,"a",CME,"ter",ERROR+80H                 ;26
-  DB INVALID,CAR,"gu",CME,"n","t"+80H                ;27
-  DB "N",UMBER,TOO,"l",CAR,"g","e"+80H             ;28
-  DB "Not un",CDE,"rs",CTO,"o","d"+80H                  ;29
-  DB "Integer out",SOFS,"rang","e"+80H        ;30
-  DB "S",TATEMENT," doesn't exis","t"+80H         ;31
-  DB "Off s",CREEN+80H                     ;32
-  DB NO,"room for l",IN,"e"+80H                ;33
-  DB INVALID,"s",CREEN," mod","e"+80H         ;34
-  DB INVALID,"BLITZ cod","e"+80H              ;35
-  DB "S",CTO,"red ",CAR,"ea",TOO,"bi","g"+80H           ;36
-  DB INVALID,"PUT bloc","k"+80H               ;37
-  DB "PUT mask mismatc","h"+80H               ;38
-  DB MISSING,"END I","F"+80H                  ;39
-  DB INVALID,"v",CAR,"iable",SNAME+80H          ;40
-  DB "BASIC stack ful","l"+80H                ;41
-  DB STRING,TOO,LONG+80H                 ;42
-  DB INVALID,"s",CREEN," n",UMBER+80H      ;43
-  DB "S",CREEN,ISALREDOP+80H               ;44
-  DB "S",TREAM,ISALREDOP+80H               ;45
-  DB "Current s",CREEN+80H                 ;46  WAS INVALID CHANNEL
-  DB "S",TREAM," is",SNOTS,"ope","n"+80H      ;47
-  DB INVALID,"CLEAR addres","s"+80H           ;48
-  DB INVALID,NOTE+80H                      ;49
-  DB NOTE,TOO,LONG+80H                     ;50
-  DB "FPC",ERROR+80H                       ;51
-  DB TOOMANY,CDE,"f",IN,"ition","s"+80H            ;52
-  DB "No DO","S"+80H                          ;53
-  DB INVALID,"WINDO","W"+80H                  ;54
-  DB MISSING,"dis","k"+80H                    ;55
+  DB "O","K"+&80  ;0
+
+  DM "Out"
+  DB SOFS,CME
+  DM "mor"
+  DB "y"+&80  ;1
+
+  DB SNOTS
+  DM "foun"
+  DB "d"+&80  ;2
+
+  DM "DATA has all been rea"
+  DB "d"+&80  ;3
+
+  DM "Subscript wron"
+  DB "g"+&80  ;4
+
+  DB CNXT,WITHOUT
+  DM "FO"
+  DB "R"+&80  ;5
+
+  DM "FOR"
+  DB WITHOUT,CNXT+&80  ;6
+
+  DM "FN"
+  DB WITHOUT
+  DM "DEF F"
+  DB "N"+&80  ;7
+
+  DM "RETURN"
+  DB WITHOUT
+  DM "GOSU"
+  DB "B"+&80  ;8
+
+  DB MISSING,CLOOP+&80  ;9
+
+  DB CLOOP,WITHOUT,"D","O"+&80  ;10
+
+  DB NO
+  DM "POP dat"
+  DB "a"+&80  ;11
+
+  DB MISSING
+  DM "DEF"
+  DB CPROC+&80  ;12
+
+  DB NO
+  DM "END"
+  DB CPROC+&80  ;13
+
+  DB BREAK
+  DM "- CONTINUE "
+  DB CTO
+  DM " repea"
+  DB "t"+&80  ;14
+
+  DB BREAK,CIN,CTO
+  DM " progra"
+  DB "m"+&80  ;15
+
+  DB CSTOP,"s",TATEMENT+&80  ;16
+
+  DB CSTOP,CIN
+  DM " INPU"
+  DB "T"+&80  ;17
+
+  DB INVALID,FILE,SNAME+&80  ;18
+
+  DM "Load"
+  DB CIN,"g",ERROR+&80  ;19
+
+  DB INVALID,CDE
+  DM "vic"
+  DB "e"+&80  ;20
+
+  DB INVALID,"s",TREAM
+  DM " n"
+  DB UMBER+&80  ;21
+
+  DM "End"
+  DB SOFS,FILE+&80  ;22
+
+  DB INVALID,CLOUR+&80  ;23
+
+  DB INVALID,PALET,CLOUR+&80  ;24
+
+  DB TOOMANY,PALET
+  DM "change"
+  DB "s"+&80  ;25
+
+  DB "P",CAR,"a",CME
+  DM "ter"
+  DB ERROR+&80  ;26
+
+  DB INVALID,CAR
+  DM "gu"
+  DB CME,"n","t"+&80  ;27
+
+  DB "N",UMBER,TOO,"l",CAR,"g","e"+&80  ;28
+
+  DM "Not un"
+  DB CDE
+  DM "rs"
+  DB CTO,"o","d"+&80  ;29
+
+  DM "Integer out"
+  DB SOFS
+  DM "rang"
+  DB "e"+&80  ;30
+
+  DB "S",TATEMENT
+  DM " doesn't exis"
+  DB "t"+&80  ;31
+
+  DM "Off s"
+  DB CREEN+&80  ;32
+
+  DB NO
+  DM "room for l"
+  DB CIN,"e"+&80  ;33
+
+  DB INVALID,"s",CREEN
+  DM " mod"
+  DB "e"+&80  ;34
+
+  DB INVALID
+  DM "BLITZ cod"
+  DB "e"+&80  ;35
+
+  DB "S",CTO
+  DM "red "
+  DB CAR
+  DM "ea"
+  DB TOO
+  DM "bi"
+  DB "g"+&80  ;36
+
+  DB INVALID
+  DM "PUT bloc"
+  DB "k"+&80  ;37
+
+  DM "PUT mask mismatc"
+  DB "h"+&80  ;38
+
+  DB MISSING
+  DM "END I"
+  DB "F"+&80  ;39
+
+  DB INVALID,"v",CAR
+  DM "iable"
+  DB SNAME+&80  ;40
+
+  DM "BASIC stack ful"
+  DB "l"+&80  ;41
+
+  DB STRING,TOO,LONG+&80  ;42
+
+  DB INVALID,"s",CREEN
+  DM " n"
+  DB UMBER+&80  ;43
+
+  DB "S",CREEN,ISALREDOP+&80  ;44
+
+  DB "S",TREAM,ISALREDOP+&80  ;45
+
+  DM "Current s"
+  DB CREEN+&80  ;46  WAS INVALID CHANNEL
+
+  DB "S",TREAM
+  DM " is"
+  DB SNOTS
+  DM "ope"
+  DB "n"+&80  ;47
+
+  DB INVALID
+  DM "CLEAR addres"
+  DB "s"+&80  ;48
+
+  DB INVALID,NOTE+&80  ;49
+
+  DB NOTE,TOO,LONG+&80  ;50
+
+  DM "FPC"
+  DB ERROR+&80  ;51
+
+  DB TOOMANY,CDE,"f",CIN
+  DM "ition"
+  DB "s"+&80  ;52
+
+  DM "No DO"
+  DB "S"+&80  ;53
+
+  DB INVALID
+  DM "WINDO"
+  DB "W"+&80  ;54
+
+  DB MISSING
+  DM "dis"
+  DB "k"+&80  ;55
 
 ;SAVES OVER 200 BYTES.
 
-COMPLIST:  DB "Invalid"," "+80H            ;14 uses
+COMPLIST:  DM "Invalid"
+           DB " "+&80            ;14 uses
 
-INVALID    EQU 0
+INVALID:   EQU 0
 
-           DB " without"," "+80H           ;5 uses
+           DM " without"
+           DB " "+&80           ;5 uses
 
-WITHOUT    EQU 1
+WITHOUT:   EQU 1
 
-           DB "Missing"," "+80H            ;5 uses
+           DM "Missing"
+           DB " "+&80            ;5 uses
 
-MISSING    EQU 2
+MISSING:   EQU 2
 
-           DB " too"," "+80H               ;3 uses
+           DM " too"
+           DB " "+&80               ;3 uses
 
-TOO        EQU 3
+TOO:       EQU 3
 
-           DB " is already ope","n"+80H    ;2 uses
+           DM " is already ope"
+           DB "n"+&80    ;2 uses
 
-ISALREDOP  EQU 4
+ISALREDOP: EQU 4
 
-           DB "palette"," "+80H            ;2 uses
+           DM "palette"
+           DB " "+&80            ;2 uses
 
-PALET      EQU 5
+PALET:     EQU 5
 
-           DB " of"," "+80H                ;3 uses
+           DM " of"
+           DB " "+&80                ;3 uses
 
-SOFS       EQU 6
+SOFS:      EQU 6
 
-           DB " erro","r"+80H              ;4 uses
+           DM " erro"
+           DB "r"+&80              ;4 uses
 
-ERROR      EQU 7
+ERROR:     EQU 7
 
-           DB "trea","m"+80H               ;3 uses
+           DM "trea"
+           DB "m"+&80               ;3 uses
 
-TREAM      EQU 8
+TREAM:     EQU 8
 
-           DB "umbe","r"+80H               ;3 uses
+           DM "umbe"
+           DB "r"+&80               ;3 uses
 
-UMBER      EQU 9
+UMBER:     EQU 9
 
-           DB "NEX","T"+80H                ;2 uses
+           DM "NEX"
+           DB "T"+&80                ;2 uses
 
-CNXT       EQU 10
+CNXT:      EQU 10
 
-           DB "No"," "+80H                 ;3 uses
+           DM "No"
+           DB " "+&80                 ;3 uses
 
-NO         EQU 11
+NO:        EQU 11
 
-           DB "BREAK"," "+80H              ;2 uses
+           DM "BREAK"
+           DB " "+&80              ;2 uses
 
-BREAK      EQU 12
+BREAK:     EQU 12
 
-           DB "cree","n"+80H               ;6 USES
+           DM "cree"
+           DB "n"+&80               ;6 USES
 
-CREEN      EQU 13
+CREEN:     EQU 13
 
-           DB " array:"," "+80H            ;2 USES
+           DM " array:"
+           DB " "+&80            ;2 USES
 
-ARRAY      EQU 14
+ARRAY:     EQU 14
 
-           DB "Not","e"+80H                ;2 USES
+           DM "Not"
+           DB "e"+&80                ;2 USES
 
-NOTE       EQU 15
+NOTE:      EQU 15
 
-           DB "lon","g"+80H                ;2 USES
+           DM "lon"
+           DB "g"+&80                ;2 USES
 
-LONG       EQU 16
+LONG:      EQU 16
 
-           DB " not"," "+80H               ;2 USES
+           DM " not"
+           DB " "+&80               ;2 USES
 
-SNOTS      EQU 17
+SNOTS:     EQU 17
 
-           DB " nam","e"+80H               ;2 USES
+           DM " nam"
+           DB "e"+&80               ;2 USES
 
-SNAME      EQU 18
+SNAME:     EQU 18
 
-           DB "Strin","g"+80H          ;2 USES
+           DM "Strin"
+           DB "g"+&80          ;2 USES
 
-STRING     EQU 19
+STRING:    EQU 19
 
-           DB "Too many"," "+80H       ;2 USES
+           DM "Too many"
+           DB " "+&80       ;2 USES
 
-TOOMANY    EQU 20
+TOOMANY:   EQU 20
 
-           DB "tatemen","t"+80H         ;2 USES
+           DM "tatemen"
+           DB "t"+&80         ;2 USES
 
-TATEMENT   EQU 21
+TATEMENT:  EQU 21
 
-           DB "STOP"," "+80H           ;2 USES
+           DM "STOP"
+           DB " "+&80           ;2 USES
 
-CSTOP      EQU 22
+CSTOP:     EQU 22
 
-           DB "fil","e"+80H            ;2 USES
+           DM "fil"
+           DB "e"+&80            ;2 USES
 
-FILE       EQU 23
+FILE:      EQU 23
 
-           DB "colou","r"+80H          ;2 USES
+           DM "colou"
+           DB "r"+&80          ;2 USES
 
-CLOUR      EQU 24
+CLOUR:     EQU 24
 
-           DB "i","n"+80H              ;5 USES
+           DB "i","n"+&80              ;5 USES
 
-IN         EQU 25
+CIN:       EQU 25
 
-           DB " PRO","C"+80H           ;2 USES
+           DM " PRO"
+           DB "C"+&80           ;2 USES
 
-CPROC      EQU 26
+CPROC:     EQU 26
 
-           DB "LOO","P"+80H            ;2 USES
+           DM "LOO"
+           DB "P"+&80            ;2 USES
 
-CLOOP      EQU 27
+CLOOP:     EQU 27
 
-           DB "t","o"+80H              ;4 USES
+           DB "t","o"+&80              ;4 USES
 
-CTO        EQU 28
+CTO:       EQU 28
 
-           DB "d","e"+80H              ;4 USES
+           DB "d","e"+&80              ;4 USES
 
-CDE        EQU 29
+CDE:       EQU 29
 
-           DB "m","e"+80H              ;2 USES
+           DB "m","e"+&80              ;2 USES
 
-CME        EQU 30
+CME:       EQU 30
 
-           DB "a","r"+80H              ;6 USES
+           DB "a","r"+&80              ;6 USES
 
-CAR        EQU 31
+CAR:       EQU 31
 
 ;TOKENS.SAM - SAM TOKEN TABLE.
-;FUNCTIONS RANGE 21-69H, PRECEDED BY FF
+;FUNCTIONS RANGE 21-&69, PRECEDED BY FF
 ;ASCII RANGE 20-7F
 ;BLOCK GRAPHICS/EXTENDED CHARS  80-8F
 ;EXTENDED CHARS 90-A8
-;(80H-A8H ACT AS UDGS - PROGRAMMED AS BLOCK GRAPHICS, FOLLOWED BY EXTENDED CHARS
+;(&80-A8H ACT AS UDGS - PROGRAMMED AS BLOCK GRAPHICS, FOLLOWED BY EXTENDED CHARS
 ;ON POWER-UP. UDGS SYS VAR PTS TO USR "A". TAKES 328 BYTES OF RAM. OVERLAP WITH
 ;COMMAND TOKENS USES CONTEXT TO AVOID PROBLEMS - PRINT CHR$ 160 GIVES UDG, LIST
 ;COMMAND GIVES KEYWORD. QUOTES FORCES UDGS.
@@ -11827,250 +12020,606 @@ CAR        EQU 31
 ;QUALIFIERS  96-9F
 ;COMMANDS RANGE A0-FE
 
-;FUNCTIONS HAVE 0FFH PREFIX
+;FUNCTIONS HAVE &0FF PREFIX
 
 ;"IMMEDIATE" FUNCTIONS
 
-KEYWTAB:      DB 0A0H
-IMFNTL:       DC "PI"            ;3BH
-              DC "RND"           ;
-              DC "POINT"         ;
-              DC "FREE"          ;
-              DC "LENGTH"        ;
-              DC "ITEM"          ;
-              DC "ATTR"          ;
-              DC "FN"            ;
-              DC "BIN"           ;
-              DC "XMOUSE"        ;
-              DC "YMOUSE"        ;
-              DC "XPEN"          ;
-              DC "YPEN"          ;
-              DC "RAMTOP"        ;
-              DC "-"             ; UNUSED INARRAY
-              DC "INSTR"         ;4AH
+KEYWTAB:      DB &A0
 
-              DC "INKEY$"        ;4BH
-              DC "SCREEN$"       ;
-              DC "MEM$"          ;
-              DC "-"             ; UNUSED CHAR$
-              DC "PATH$"         ;
-              DC "STRING$"       ;
-              DC "-"             ; UNUSED USING$
-              DC "-"             ;52H UNUSED SHIFT$
+IMFNTL:       DM "P"            ;&3B
+              DB "I"+&80
+
+              DM "RN"           ;
+              DB "D"+&80
+
+              DM "POIN"         ;
+              DB "T"+&80
+
+              DM "FRE"          ;
+              DB "E"+&80
+
+              DM "LENGT"        ;
+              DB "H"+&80
+
+              DM "ITE"          ;
+              DB "M"+&80
+
+              DM "ATT"          ;
+              DB "R"+&80
+
+              DM "F"            ;
+              DB "N"+&80
+
+              DM "BI"           ;
+              DB "N"+&80
+
+              DM "XMOUS"        ;
+              DB "E"+&80
+
+              DM "YMOUS"        ;
+              DB "E"+&80
+
+              DM "XPE"          ;
+              DB "N"+&80
+
+              DM "YPE"          ;
+              DB "N"+&80
+
+              DM "RAMTO"        ;
+              DB "P"+&80
+
+              DB "-"+&80        ; UNUSED INARRAY
+
+              DM "INST"         ;&4A
+              DB "R"+&80
+
+              DM "INKEY"        ;&4B
+              DB "$"+&80
+
+
+              DM "SCREEN"       ;
+              DB "$"+&80
+
+              DM "MEM"          ;
+              DB "$"+&80
+
+              DB "-"+&80        ; UNUSED CHAR$
+
+              DM "PATH"         ;
+              DB "$"+&80
+
+              DM "STRING"       ;
+              DB "$"+&80
+
+              DB "-"+&80        ; UNUSED USING$
+              DB "-"+&80        ;&52 UNUSED SHIFT$
 
 ;FPC FUNCTIONS
 
-FPCFNTL:      DC "SIN"           ;53H
-              DC "COS"           ;
-              DC "TAN"           ;
-              DC "ASN"           ;
-              DC "ACS"           ;
-              DC "ATN"           ;
-              DC "LN"            ;
-              DC "EXP"           ;
-              DC "ABS"           ;
-              DC "SGN"           ;
-              DC "SQR"           ;
-              DC "INT"           ;
-              DC "USR"           ;
-              DC "IN"            ;
-              DC "PEEK"          ;
-              DC "DPEEK"         ;
-              DC "DVAR"          ;
-              DC "SVAR"          ;
-              DC "BUTTON"        ;
-              DC "EOF"           ;
-              DC "PTR"           ;   DISC USE?
-              DC "-"             ; RESERVED
-              DC "UDG"           ;
-              DC "-"             ;
-              DC "LEN"           ;
-              DC "CODE"          ;
-              DC "VAL$"          ;
-              DC "VAL"           ;
-              DC "TRUNC$"        ;
-              DC "CHR$"          ;
-              DC "STR$"          ;
-              DC "BIN$"          ;
-              DC "HEX$"          ;
-              DC "USR$"          ;
-              DC "-"             ; CORRESPONDS TO INKEY$ FPC CODE
-              DC "NOT"           ;
-              DC "-"             ;
-              DC "-"             ;
-              DC "-"             ;79H
+FPCFNTL:      DM "SI"           ;&53
+              DB "N"+&80
+
+              DM "CO"           ;
+              DB "S"+&80
+
+              DM "TA"           ;
+              DB "N"+&80
+
+              DM "AS"           ;
+              DB "N"+&80
+
+              DM "AC"           ;
+              DB "S"+&80
+
+              DM "AT"           ;
+              DB "N"+&80
+
+              DM "L"            ;
+              DB "N"+&80
+
+              DM "EX"           ;
+              DB "P"+&80
+
+              DM "AB"           ;
+              DB "S"+&80
+
+              DM "SG"           ;
+              DB "N"+&80
+
+              DM "SQ"           ;
+              DB "R"+&80
+
+              DM "IN"           ;
+              DB "T"+&80
+
+              DM "US"           ;
+              DB "R"+&80
+
+              DM "I"            ;
+              DB "N"+&80
+
+              DM "PEE"          ;
+              DB "K"+&80
+
+              DM "DPEE"         ;
+              DB "K"+&80
+
+              DM "DVA"          ;
+              DB "R"+&80
+
+              DM "SVA"          ;
+              DB "R"+&80
+
+              DM "BUTTO"        ;
+              DB "N"+&80
+
+              DM "EO"           ;
+              DB "F"+&80
+
+              DM "PT"           ;   DISC USE?
+              DB "R"+&80
+
+              DB "-"+&80
+
+              DM "UD"           ;
+              DB "G"+&80
+
+              DB "-"+&80
+
+              DM "LE"           ;
+              DB "N"+&80
+
+              DM "COD"          ;
+              DB "E"+&80
+
+              DM "VAL"          ;
+              DB "$"+&80
+
+              DM "VA"           ;
+              DB "L"+&80
+
+              DM "TRUNC"        ;
+              DB "$"+&80
+
+              DM "CHR"          ;
+              DB "$"+&80
+
+              DM "STR"          ;
+              DB "$"+&80
+
+              DM "BIN"          ;
+              DB "$"+&80
+
+              DM "HEX"          ;
+              DB "$"+&80
+
+              DM "USR"          ;
+              DB "$"+&80
+
+              DB "-"+&80        ; CORRESPONDS TO INKEY$ FPC CODE
+
+              DM "NO"           ;
+              DB "T"+&80
+
+              DB "-"+&80        ;
+              DB "-"+&80        ;
+              DB "-"+&80        ;&79
 
 ;BINARY OPERATORS
 
-BINFNTL:      DC "MOD"           ;7AH
-              DC "DIV"           ;
-              DC "BOR"           ;
-              DC "-"             ;
-              DC "BAND"          ;
-              DC "OR"            ;
-              DC "AND"           ;
-              DC "<>"            ;
-              DC "<="            ;
-              DC ">="            ;83H
+BINFNTL:      DM "MO"           ;&7A
+              DB "D"+&80
+
+              DM "DI"           ;
+              DB "V"+&80
+
+              DM "BO"           ;
+              DB "R"+&80
+
+              DB "-"+&80
+
+              DM "BAN"          ;
+              DB "D"+&80
+
+              DM "O"            ;
+              DB "R"+&80
+
+              DM "AN"           ;
+              DB "D"+&80
+
+              DM "<"            ;
+              DB ">"+&80
+
+              DM "<"            ;
+              DB "="+&80
+
+              DM ">"            ;&83
+              DB "="+&80
 
 
-;QUALIFIERS - RANGE 85H-8FH
 
-KWDS85:       DC "USING"             ;85H
-              DC "WRITE"             ;86
-              DC "AT"                ;87
-              DC "TAB"               ;88
-              DC "OFF"               ;89
-              DC "WHILE"             ;8A
-              DC "UNTIL"             ;8B
-              DC "LINE"              ;8C
-              DC "THEN"              ;8D
-              DC "TO"                ;8E
-              DC "STEP"              ;8F
+;QUALIFIERS - RANGE &85-&8F
 
-;COMMANDS.  RANGE 90H-FEH
+KWDS85:       DM "USIN"             ;&85
+              DB "G"+&80
 
-              DC "DIR"               ;90
-              DC "FORMAT"            ;91
-              DC "ERASE"             ;92
-              DC "MOVE"              ;93
-              DC "SAVE"              ;94
-              DC "LOAD"              ;95
-              DC "MERGE"             ;96
-              DC "VERIFY"            ;97
-              DC "OPEN"              ;98
-              DC "CLOSE"             ;99
+              DM "WRIT"             ;86
+              DB "E"+&80
 
-              DC "CIRCLE"            ;9A
-              DC "PLOT"              ;9B
-              DC "LET"               ;9C
-              DC "BLITZ"             ;9D
-              DC "BORDER"            ;9E
-              DC "CLS"               ;9F
+              DM "A"                ;87
+              DB "T"+&80
 
-KWDSA0:       DC "PALETTE"           ;A0
-              DC "PEN"               ;A1
-              DC "PAPER"             ;A2
-              DC "FLASH"             ;A3
-              DC "BRIGHT"            ;A4
-              DC "INVERSE"           ;A5
-              DC "OVER"              ;A6
+              DM "TA"               ;88
+              DB "B"+&80
 
-              DC "FATPIX"            ;A7  0=THIN, 1=FAT
-              DC "CSIZE"             ;A8
-              DC "BLOCKS"            ;A9
-              DC "MODE"              ;AA
-              DC "GRAB"              ;AB
-              DC "PUT"               ;AC
+              DM "OF"               ;89
+              DB "F"+&80
 
-              DC "BEEP"              ;AD
-              DC "SOUND"             ;AE
+              DM "WHIL"             ;8A
+              DB "E"+&80
 
-              DC "NEW"               ;AF
-              DC "RUN"               ;B0
-              DC "STOP"              ;B1
-              DC "CONTINUE"          ;B2
-              DC "CLEAR"             ;B3
-              DC "GO TO"             ;B4
-              DC "GO SUB"            ;B5
-              DC "RETURN"            ;B6
-              DC "REM"               ;B7
+              DM "UNTI"             ;8B
+              DB "L"+&80
 
-              DC "READ"              ;B8
-              DC "DATA"              ;B9
-              DC "RESTORE"           ;BA
+              DM "LIN"              ;8C
+              DB "E"+&80
 
-              DC "PRINT"             ;BB
-              DC "LPRINT"            ;BC
-              DC "LIST"              ;BD
-              DC "LLIST"             ;BE
-              DC "DUMP"              ;BF
+              DM "THE"              ;8D
+              DB "N"+&80
 
-KWDSC0:       DC "FOR"               ;C0
-              DC "NEXT"              ;C1
-              DC "PAUSE"             ;C2
-              DC "DRAW"              ;C3
-              DC "DEFAULT"           ;C4
-              DC "DIM"               ;C5
-              DC "INPUT"             ;C6
-              DC "RANDOMIZE"         ;C7
-              DC "DEF FN"            ;C8
-              DC "DEF KEYCODE"       ;C9
-              DC "DEF PROC"          ;CA
-              DC "END PROC"          ;CB
-              DC "RENUM"             ;CC
-              DC "DELETE"            ;CD
-              DC "REF"               ;CE
-              DC "COPY"              ;CF
-              DC "DRIVER"            ;D0
-              DC "KEYIN"             ;D1
-              DC "LOCAL"             ;D2
-              DC "LOOP IF"           ;D3
-              DC "DO"                ;D4
-              DC "LOOP"              ;D5
-              DC "EXIT IF"           ;D6
-              DC "IF"                ;D7
-              DC "IF"                ;D8
-              DC "ELSE"              ;D9
-              DC "ELSE"              ;DA
-              DC "END IF"            ;DB
-              DC "KEY"               ;DC
-              DC "ON ERROR"          ;DD
-              DC "ON"                ;DE
-              DC "GET"               ;DF
+              DM "T"                ;8E
+              DB "O"+&80
 
-KWDSE0:       DC "OUT"               ;E0
-              DC "POKE"              ;E1
-              DC "DPOKE"             ;E2
-              DC "RENAME"            ;E3
-              DC "CALL"              ;E4
-              DC "ROLL"              ;E5
-              DC "SCROLL"            ;E6
-              DC "SCREEN"            ;E7
-              DC "DISPLAY"           ;E8
-BTWD:         DC "BOOT"              ;E9 USED BY BOOT TO CHECK FILE NAME
-              DC "LABEL"             ;EA
-              DC "FILL"              ;EB
-              DC "WINDOW"            ;EC
-              DC "AUTO"              ;ED
-              DC "POP"               ;EE
-              DC "RECORD"            ;EF
-              DC "DEVICE"            ;F0
-              DC "PROTECT"           ;F1
-              DC "HIDE"              ;F2
-              DC "ZAP"               ;F3
-              DC "POW"               ;F4
-              DC "BOOM"              ;F5
-              DC "ZOOM"              ;F6
-              DC "-"                 ;F7
-              DC "-"                 ;F8
-              DC "-"                 ;F9
-              DC "-"                 ;FA
-              DC "-"                 ;FB
-              DC "-"                 ;FC
-              DC "-"                 ;FD
-              DC "-"                 ;FE
-              DC "INK"               ;FF (FUNCTION PREFIX) AND TEMP "INK" TOKEN
+              DM "STE"              ;8F
+              DB "P"+&80
+
+;COMMANDS.  RANGE &90-FEH
+
+              DM "DI"               ;90
+              DB "R"+&80
+
+              DM "FORMA"            ;91
+              DB "T"+&80
+
+              DM "ERAS"             ;92
+              DB "E"+&80
+
+              DM "MOV"              ;93
+              DB "E"+&80
+
+              DM "SAV"              ;94
+              DB "E"+&80
+
+              DM "LOA"              ;95
+              DB "D"+&80
+
+              DM "MERG"             ;96
+              DB "E"+&80
+
+              DM "VERIF"            ;97
+              DB "Y"+&80
+
+              DM "OPE"              ;98
+              DB "N"+&80
+
+              DM "CLOS"             ;99
+              DB "E"+&80
+
+
+              DM "CIRCL"            ;9A
+              DB "E"+&80
+
+              DM "PLO"              ;9B
+              DB "T"+&80
+
+              DM "LE"               ;9C
+              DB "T"+&80
+
+              DM "BLIT"             ;9D
+              DB "Z"+&80
+
+              DM "BORDE"            ;9E
+              DB "R"+&80
+
+              DM "CL"               ;9F
+              DB "S"+&80
+
+KWDSA0:       DM "PALETT"           ;A0
+              DB "E"+&80
+
+              DM "PE"               ;A1
+              DB "N"+&80
+
+              DM "PAPE"             ;A2
+              DB "R"+&80
+
+              DM "FLAS"             ;A3
+              DB "H"+&80
+
+              DM "BRIGH"            ;A4
+              DB "T"+&80
+
+              DM "INVERS"           ;A5
+              DB "E"+&80
+
+              DM "OVE"              ;A6
+              DB "R"+&80
+
+
+              DM "FATPI"            ;A7  0=THIN, 1=FAT
+              DB "X"+&80
+
+              DM "CSIZ"             ;A8
+              DB "E"+&80
+
+              DM "BLOCK"            ;A9
+              DB "S"+&80
+
+              DM "MOD"              ;AA
+              DB "E"+&80
+
+              DM "GRA"              ;AB
+              DB "B"+&80
+
+              DM "PU"               ;AC
+              DB "T"+&80
+
+
+              DM "BEE"              ;AD
+              DB "P"+&80
+
+              DM "SOUN"             ;AE
+              DB "D"+&80
+
+
+              DM "NE"               ;AF
+              DB "W"+&80
+
+              DM "RU"               ;B0
+              DB "N"+&80
+
+              DM "STO"              ;B1
+              DB "P"+&80
+
+              DM "CONTINU"          ;B2
+              DB "E"+&80
+
+              DM "CLEA"             ;B3
+              DB "R"+&80
+
+              DM "GO T"             ;B4
+              DB "O"+&80
+
+              DM "GO SU"            ;B5
+              DB "B"+&80
+
+              DM "RETUR"            ;B6
+              DB "N"+&80
+
+              DM "RE"               ;B7
+              DB "M"+&80
+
+
+              DM "REA"              ;B8
+              DB "D"+&80
+
+              DM "DAT"              ;B9
+              DB "A"+&80
+
+              DM "RESTOR"           ;BA
+              DB "E"+&80
+
+
+              DM "PRIN"             ;BB
+              DB "T"+&80
+
+              DM "LPRIN"            ;BC
+              DB "T"+&80
+
+              DM "LIS"              ;BD
+              DB "T"+&80
+
+              DM "LLIS"             ;BE
+              DB "T"+&80
+
+              DM "DUM"              ;BF
+              DB "P"+&80
+
+KWDSC0:       DM "FO"               ;C0
+              DB "R"+&80
+
+              DM "NEX"              ;C1
+              DB "T"+&80
+
+              DM "PAUS"             ;C2
+              DB "E"+&80
+
+              DM "DRA"              ;C3
+              DB "W"+&80
+
+              DM "DEFAUL"           ;C4
+              DB "T"+&80
+
+              DM "DI"               ;C5
+              DB "M"+&80
+
+              DM "INPU"             ;C6
+              DB "T"+&80
+
+              DM "RANDOMIZ"         ;C7
+              DB "E"+&80
+
+              DM "DEF F"            ;C8
+              DB "N"+&80
+
+              DM "DEF KEYCOD"       ;C9
+              DB "E"+&80
+
+              DM "DEF PRO"          ;CA
+              DB "C"+&80
+
+              DM "END PRO"          ;CB
+              DB "C"+&80
+
+              DM "RENU"             ;CC
+              DB "M"+&80
+
+              DM "DELET"            ;CD
+              DB "E"+&80
+
+              DM "RE"               ;CE
+              DB "F"+&80
+
+              DM "COP"              ;CF
+              DB "Y"+&80
+
+              DB "-"+&80            ;D0
+
+              DM "KEYI"             ;D1
+              DB "N"+&80
+
+              DM "LOCA"             ;D2
+              DB "L"+&80
+
+              DM "LOOP I"           ;D3
+              DB "F"+&80
+
+              DM "D"                ;D4
+              DB "O"+&80
+
+              DM "LOO"              ;D5
+              DB "P"+&80
+
+              DM "EXIT I"           ;D6
+              DB "F"+&80
+
+              DM "I"                ;D7
+              DB "F"+&80
+
+              DM "I"                ;D8
+              DB "F"+&80
+
+              DM "ELS"              ;D9
+              DB "E"+&80
+
+              DM "ELS"              ;DA
+              DB "E"+&80
+
+              DM "END I"            ;DB
+              DB "F"+&80
+
+              DM "KE"               ;DC
+              DB "Y"+&80
+
+              DM "ON ERRO"          ;DD
+              DB "R"+&80
+
+              DM "O"                ;DE
+              DB "N"+&80
+
+              DM "GE"               ;DF
+              DB "T"+&80
+
+KWDSE0:       DM "OU"               ;E0
+              DB "T"+&80
+
+              DM "POK"              ;E1
+              DB "E"+&80
+
+              DM "DPOK"             ;E2
+              DB "E"+&80
+
+              DM "RENAM"            ;E3
+              DB "E"+&80
+
+              DM "CAL"              ;E4
+              DB "L"+&80
+
+              DM "ROL"              ;E5
+              DB "L"+&80
+
+              DM "SCROL"            ;E6
+              DB "L"+&80
+
+              DM "SCREE"            ;E7
+              DB "N"+&80
+
+              DM "DISPLA"           ;E8
+              DB "Y"+&80
+
+BTWD:         DM "BOO"              ;E9 USED BY BOOT TO CHECK FILE NAME
+              DB "T"+&80
+
+              DM "LABE"             ;EA
+              DB "L"+&80
+
+              DM "FIL"              ;EB
+              DB "L"+&80
+
+              DM "WINDO"            ;EC
+              DB "W"+&80
+
+              DM "AUT"              ;ED
+              DB "O"+&80
+
+              DM "PO"               ;EE
+              DB "P"+&80
+
+              DM "RECOR"            ;EF
+              DB "D"+&80
+
+              DM "DEVIC"            ;F0
+              DB "E"+&80
+
+              DM "PROTEC"           ;F1
+              DB "T"+&80
+
+              DM "HID"              ;F2
+              DB "E"+&80
+
+              DM "ZA"               ;F3
+              DB "P"+&80
+
+              DM "PO"               ;F4
+              DB "W"+&80
+
+              DM "BOO"              ;F5
+              DB "M"+&80
+
+              DM "ZOO"              ;F6
+              DB "M"+&80
+
+              DB "-"+&80            ;F7
+              DB "-"+&80            ;F8
+              DB "-"+&80            ;F9
+              DB "-"+&80            ;FA
+              DB "-"+&80            ;FB
+              DB "-"+&80            ;FC
+              DB "-"+&80            ;FD
+              DB "-"+&80            ;FE
+
+              DM "IN"               ;FF (FUNCTION PREFIX) AND TEMP "INK" TOKEN
+              DB "K"+&80
 
 
 
 ;DEF KEY INIT TABLE
 
-DKSRC:     DB 192,1,0,0BDH                           ;F0 LIST
-           DB 193,2,0,0CCH,":"                       ;F1 RENUM :
-           DB 194,2,0,0BBH,":"                       ;F2 PRINT :
-           DB 195,2,0,0AAH,":"                       ;F3 MODE :
-           DB 196,1,0,0B0H                           ;F4 RUN
-           DB 197,1,0,0B2H                           ;F5 CONTINUE
-           DB 198,2,0,09FH,"#"                       ;F6 CLS #
-           DB 199,3,0,LOADTOK,22H,22H                ;F7 LOAD ""
-           DB 200,5,0,LOADTOK,22H,22H,0FFH,CODETOK   ;F8 LOAD "" CODE
-           DB 201,1,0,0E9H                           ;F9 BOOT
+DKSRC:     DB 192,1,0,&BD                            ;F0 LIST
+           DB 193,2,0,&CC,":"                        ;F1 RENUM :
+           DB 194,2,0,&BB,":"                        ;F2 PRINT :
+           DB 195,2,0,&AA,":"                        ;F3 MODE :
+           DB 196,1,0,&B0                            ;F4 RUN
+           DB 197,1,0,&B2                            ;F5 CONTINUE
+           DB 198,2,0,&9F,"#"                        ;F6 CLS #
+           DB 199,3,0,LOADTOK,&22,&22                ;F7 LOAD ""
+           DB 200,5,0,LOADTOK,&22,&22,&FF,CODETOK    ;F8 LOAD "" CODE
+           DB 201,1,0,&E9                            ;F9 BOOT
 
            DB 252,2,0,6,":"                          ;TAB
            DB 253,3,0,20,1,":"                       ;INVERSE 1 CC
            DB 254,3,0,20,0,":"                       ;INVERSE 0 CC
-DKEN:      DB 0FFH
+DKEN:      DB &FF
 
 ;INIT TABLE - 18 BYTES
 
@@ -12081,11 +12630,11 @@ CHIT:      DB ">"        ;CURRENT LINE CURSOR
            DB "T",TSPEED ;DEVICE T, TAPE SPEED
            DB 17         ;COLOUR FLASH SPEED
            DW LINICOLS   ;LINIPTR
-           DB 0FFH,0,0   ;XCMDP SHOWS "NO EXTERNAL CMDS"
+           DB &FF,0,0    ;XCMDP SHOWS "NO EXTERNAL CMDS"
 
            DB 79         ;PRINTER RHS
            DB 10         ;AFTER CR CHARACTER
-           DB 0E9H       ;PRINTER CONTROL PORT (E8=DATA)
+           DB &E9        ;PRINTER CONTROL PORT (E8=DATA)
            DB 1          ;PRINTER STROBE BYTE
 
 MAIT:      DW BSTACK     ;BASSTK
@@ -12125,7 +12674,7 @@ CHANTAB:   DW PRMAIN
            DW IDERR
            DB "B"
 
-           DB 0DH            ;KEEPS READ CMD HAPPY ON FIRST LINE
+           DB &0D            ;KEEPS READ CMD HAPPY ON FIRST LINE
 
 ;KEY MAP FOR 70 KEYS (3 NOT READ THIS WAY) IN UNSHIFTED, CAPS SHIFTED AND SYMB.
 ;SHIFTED STATES. EACH ROW CORRESPONDS TO A BIT ON THE PORT (BIT 7 AT TOP) AND
@@ -12139,39 +12688,39 @@ CHANTAB:   DW PRMAIN
 ;253 DEFINED AS INVERSE CC,1
 ;252 DEFINED AS CHR$ 6
 
-KSRC:      DB     253,07H,0C0H,12,6H,0C9H,198,195  ;BIT 7
-           DB "X",".",":",""","+",252,200,197,194  ;    6
+KSRC:      DB     253,&07,&C0, 12,&06,&C9,198,195  ;BIT 7
+           DB "X",".",":", 34,"+",252,200,197,194  ;    6
            DB "X",",",";","=","-"," ",199,196,193  ;    5
 
-           DB 09H,"b","h","y","6","5","t","g","v"  ;    4
-           DB 08H,"n","j","u","7","4","r","f","c"  ;    3
-           DB 0AH,"m","k","i","8","3","e","d","x"  ;    2
-           DB 0BH,"X","l","o","9","2","w","s","z"  ;    1
-           DB "X"," ",0DH,"p","0","1","q","a"      ;    0
+           DB &09,"b","h","y","6","5","t","g","v"  ;    4
+           DB &08,"n","j","u","7","4","r","f","c"  ;    3
+           DB &0A,"m","k","i","8","3","e","d","x"  ;    2
+           DB &0B,"X","l","o","9","2","w","s","z"  ;    1
+           DB "X"," ",&0D,"p","0","1","q","a"      ;    0
 
 ;CAPS SHIFTED
 
-           DB     "\",07H,202,0EH,06H,211,208,205
+           DB     "\",&07,202,&0E,&06,211,208,205
            DB "X",".",":",127,"*",252,210,207,204
            DB "X",",",";","_","/"," ",209,206,203
 
-           DB 09H,"B","H","Y","&","%","T","G","V"
-           DB 08H,"N","J","U","'","$","R","F","C"
-           DB 0AH,"M","K","I","(","#","E","D","X"
-           DB 0BH,"X","L","O",")","@","W","S","Z"
-           DB "X"," ",0DH,"P",126,"!","Q","A"
+           DB &09,"B","H","Y","&","%","T","G","V"
+           DB &08,"N","J","U","'","$","R","F","C"
+           DB &0A,"M","K","I","(","#","E","D","X"
+           DB &0B,"X","L","O",")","@","W","S","Z"
+           DB "X"," ",&0D,"P",126,"!","Q","A"
 
 ;SYMBOL SHIFTED
 
-           DB     254,0FH,"0",0EH,06H,"9","6","3"
-           DB "X",">","*",0CFH,"*",252,"8","5","2"
+           DB     254,&0F,"0",&0E,&06,"9","6","3"
+           DB "X",">","*",&CF,"*",252,"8","5","2"
            DB "X","<","+","_","/"," ","7","4","1"
 
-           DB 09H,9EH,5EH,157,134,133,"]","}",VERIFYTOK
-           DB 08H,164,"-",129,135,132,"[","{",168
-           DB 0AH,165,"+",0A5H,128,131,130,9CH,"?"
-           DB 0BH,"X",60H,148,124,130,">",SAVETOK,"?"
-           DB "X"," ",0DH,187,126,129,"<",0B1H
+           DB &09,&9E,&5E,157,134,133,"]","}",VERIFYTOK
+           DB &08,164,"-",129,135,132,"[","{",168
+           DB &0A,165,"+",&A5,128,131,130,&9C,"?"
+           DB &0B,"X",&60,148,124,130,">",SAVETOK,"?"
+           DB "X"," ",&0D,187,126,129,"<",&B1
 
 
 ;CONTROL KEY TABLE - DISP/VALUE
@@ -12192,30 +12741,30 @@ CKTAB:     DB 19,3           ;BRIGHT CC
 ;INITIAL PALETTE COLOURS - MS GRB BITS, BRIGHT BIT, LS GRB BITS
 ;                GRBbGRB
 
-INITCOLS:    DB 0000000B     ;BLACK
-             DB 0010000B     ;BLUE
-             DB 0100000B     ;RED
-             DB 0110000B     ;MAGENTA
-             DB 1000000B     ;GREEN
-             DB 1010000B     ;CYAN
-             DB 1100000B     ;YELLOW
-             DB 1111000B     ;WHITE
+INITCOLS:    DB %0000000     ;BLACK
+             DB %0010000     ;BLUE
+             DB %0100000     ;RED
+             DB %0110000     ;MAGENTA
+             DB %1000000     ;GREEN
+             DB %1010000     ;CYAN
+             DB %1100000     ;YELLOW
+             DB %1111000     ;WHITE
 
-             DB 0000000B     ;BRIGHT BLACK=BLACK
-             DB 0010001B     ;BLUE
-             DB 0100010B     ;RED
-             DB 0110011B     ;MAGENTA
-             DB 1000100B     ;GREEN
-             DB 1010101B     ;CYAN
-             DB 1100110B     ;YELLOW
-             DB 1111111B     ;WHITE
+             DB %0000000     ;BRIGHT BLACK=BLACK
+             DB %0010001     ;BLUE
+             DB %0100010     ;RED
+             DB %0110011     ;MAGENTA
+             DB %1000100     ;GREEN
+             DB %1010101     ;CYAN
+             DB %1100110     ;YELLOW
+             DB %1111111     ;WHITE
 
             ;COLOURS FOR 4-COLOUR MODE
 
-             DB 0000000B     ;BLACK
-             DB 0010001B     ;BLUE
-             DB 0100010B     ;RED
-             DB 1111111B     ;WHITE
+             DB %0000000     ;BLACK
+             DB %0010001     ;BLUE
+             DB %0100010     ;RED
+             DB %1111111     ;WHITE
 
 ;COMMAND ADDRESS TABLE.  RANGE 90H-FEH
 
@@ -12342,17 +12891,17 @@ CMDADT:    DW NONSENSE      ;DIR      90 ** ALTERED
 ;TABLE FOR CHARS THAT USE ALL 8 SCANS; VALUE TO USE FOR SCAN 8, DISP TO NEXT
 ;SUCH CHAR, ZERO ENDS TABLE
 
-U8TAB:     DB 08H,78H        ;","
-           DB 08H,80H        ;";"
-           DB 00H,0A0H       ;DUMMY
-           DB 0FFH,40H       ;"_"
-           DB 1CH,18H        ;"g"
-           DB 10H,30H        ;"j"
-           DB 20H,08H        ;"p"
-           DB 02H,40H        ;"q"
-           DB 1CH            ;"y"
+U8TAB:     DB &08,&78        ;","
+           DB &08,&80        ;";"
+           DB &00,&A0        ;DUMMY
+           DB &FF,&40        ;"_"
+           DB &1C,&18        ;"g"
+           DB &10,&30        ;"j"
+           DB &20,&08        ;"p"
+           DB &02,&40        ;"q"
+           DB &1C            ;"y"
 
-VVAR2:     DB 00H,5AH        ;U8TAB TERMINATOR/SVAR BASE ADDR
+VVAR2:     DB &00,&5A        ;U8TAB TERMINATOR/SVAR BASE ADDR
 
 ;USED BY PRINT NUMBER
 
@@ -12368,98 +12917,98 @@ SUBTAB:    DW -10000
 
 CHARSRC:
 
-    DB 000H,000H,000H,000H,004H
-    DB 021H,008H,040H,011H,04AH
-    DB 000H,000H,000H,029H,05FH
-    DB 057H,0D4H,0A7H,052H,08EH
-    DB 029H,05DH,09CH,088H,088H
-    DB 09CH,0D1H,04AH,022H,0B2H
-    DB 069H,084H,040H,000H,000H
-    DB 008H,088H,042H,008H,030H
-    DB 041H,008H,044H,040H,095H
-    DB 077H,0DDH,052H,000H,084H
-    DB 0F9H,008H,000H,000H,000H
-    DB 031H,084H,000H,003H,0E0H
-    DB 000H,000H,000H,000H,006H
-    DB 030H,042H,022H,022H,010H
-    DB 074H,067H,05CH,0C5H,0C4H
-    DB 061H,008H,042H,039H,0D1H
-    DB 008H,088H,08FH,0BAH,021H
-    DB 030H,062H,0E1H,019H,052H
-    DB 0F8H,085H,0F8H,078H,021H
-    DB 08BH,08CH,088H,07AH,031H
-    DB 077H,0C2H,022H,022H,010H
-    DB 074H,062H,0E8H,0C5H,0CEH
-    DB 08CH,05EH,011H,030H,000H
-    DB 031H,080H,063H,000H,006H
-    DB 030H,00CH,020H,088H,088H
-    DB 020H,082H,000H,07CH,01FH
-    DB 000H,020H,082H,008H,088H
-    DB 083H,0A2H,011H,010H,004H
-    DB 074H,067H,05BH,0C1H,0CEH
-    DB 08CH,07FH,018H,0C7H,0D1H
-    DB 08FH,0A3H,01FH,03AH,030H
-    DB 084H,022H,0EFH,046H,031H
-    DB 08CH,07DH,0F8H,043H,0D0H
-    DB 087H,0FFH,008H,07AH,010H
-    DB 083H,0A3H,008H,04EH,02EH
-    DB 08CH,063H,0F8H,0C6H,02EH
-    DB 021H,008H,042H,038H,021H
-    DB 008H,043H,017H,046H,054H
-    DB 0C5H,025H,018H,042H,010H
-    DB 084H,03FH,01DH,0D6H,031H
-    DB 08CH,063H,01CH,0D6H,071H
-    DB 08BH,0A3H,018H,0C6H,02EH
-    DB 0F4H,063H,0E8H,042H,00EH
-    DB 08CH,063H,059H,037H,0D1H
-    DB 08FH,0A9H,028H,0BAH,030H
-    DB 070H,062H,0EFH,090H,084H
-    DB 021H,009H,018H,0C6H,031H
-    DB 08BH,0A3H,018H,0C6H,02AH
-    DB 024H,063H,018H,0D6H,0AAH
-    DB 08CH,054H,045H,046H,031H
-    DB 08AH,088H,042H,013H,0E1H
-    DB 011H,011H,00FH,09CH,084H
-    DB 021H,008H,078H,041H,004H
-    DB 010H,043H,0C2H,010H,084H
-    DB 027H,008H,0EAH,090H,084H
-    DB 020H,000H,000H,000H,000H
-    DB 032H,051H,0C4H,023H,0E0H
-    DB 003H,082H,0F8H,0BEH,010H
-    DB 0F4H,063H,01FH,000H,00FH
-    DB 084H,020H,0F0H,085H,0F1H
-    DB 08CH,05EH,000H,03AH,03FH
-    DB 083H,0CCH,094H,079H,008H
-    DB 040H,000H,0F8H,0C5H,0E1H
-    DB 084H,03DH,018H,0C6H,024H
-    DB 001H,008H,042H,008H,080H
-    DB 021H,008H,042H,042H,011H
-    DB 097H,025H,012H,010H,084H
-    DB 021H,00CH,000H,06AH,0B5H
-    DB 0ADH,040H,00FH,046H,031H
-    DB 088H,000H,0E8H,0C6H,02EH
-    DB 000H,03DH,018H,0FAH,000H
-    DB 003H,0E3H,017H,084H,000H
-    DB 0B6H,061H,008H,000H,00FH
-    DB 083H,083H,0E2H,011H,0E4H
-    DB 021H,006H,000H,046H,031H
-    DB 08BH,0C0H,008H,0C6H,02AH
-    DB 020H,001H,018H,0C6H,0AAH
-    DB 000H,022H,0A2H,02AH,020H
-    DB 004H,063H,017H,084H,000H
-    DB 0F8H,088H,08FH,088H,084H
-    DB 041H,008H,022H,010H,084H
-    DB 021H,008H,082H,010H,044H
-    DB 022H,00AH,0A0H,000H,000H
-    DB 007H,082H,0D4H,0B4H,03EH
-    DB 000H,000H,00FH,07BH,0C0H
-    DB 0F7H,0BCH,000H,000H,0C8H
-    DB 074H,07FH,007H,080H
+    DB &00,&00,&00,&00,&04
+    DB &21,&08,&40,&11,&4A
+    DB &00,&00,&00,&29,&5F
+    DB &57,&D4,&A7,&52,&8E
+    DB &29,&5D,&9C,&88,&88
+    DB &9C,&D1,&4A,&22,&B2
+    DB &69,&84,&40,&00,&00
+    DB &08,&88,&42,&08,&30
+    DB &41,&08,&44,&40,&95
+    DB &77,&DD,&52,&00,&84
+    DB &F9,&08,&00,&00,&00
+    DB &31,&84,&00,&03,&E0
+    DB &00,&00,&00,&00,&06
+    DB &30,&42,&22,&22,&10
+    DB &74,&67,&5C,&C5,&C4
+    DB &61,&08,&42,&39,&D1
+    DB &08,&88,&8F,&BA,&21
+    DB &30,&62,&E1,&19,&52
+    DB &F8,&85,&F8,&78,&21
+    DB &8B,&8C,&88,&7A,&31
+    DB &77,&C2,&22,&22,&10
+    DB &74,&62,&E8,&C5,&CE
+    DB &8C,&5E,&11,&30,&00
+    DB &31,&80,&63,&00,&06
+    DB &30,&0C,&20,&88,&88
+    DB &20,&82,&00,&7C,&1F
+    DB &00,&20,&82,&08,&88
+    DB &83,&A2,&11,&10,&04
+    DB &74,&67,&5B,&C1,&CE
+    DB &8C,&7F,&18,&C7,&D1
+    DB &8F,&A3,&1F,&3A,&30
+    DB &84,&22,&EF,&46,&31
+    DB &8C,&7D,&F8,&43,&D0
+    DB &87,&FF,&08,&7A,&10
+    DB &83,&A3,&08,&4E,&2E
+    DB &8C,&63,&F8,&C6,&2E
+    DB &21,&08,&42,&38,&21
+    DB &08,&43,&17,&46,&54
+    DB &C5,&25,&18,&42,&10
+    DB &84,&3F,&1D,&D6,&31
+    DB &8C,&63,&1C,&D6,&71
+    DB &8B,&A3,&18,&C6,&2E
+    DB &F4,&63,&E8,&42,&0E
+    DB &8C,&63,&59,&37,&D1
+    DB &8F,&A9,&28,&BA,&30
+    DB &70,&62,&EF,&90,&84
+    DB &21,&09,&18,&C6,&31
+    DB &8B,&A3,&18,&C6,&2A
+    DB &24,&63,&18,&D6,&AA
+    DB &8C,&54,&45,&46,&31
+    DB &8A,&88,&42,&13,&E1
+    DB &11,&11,&0F,&9C,&84
+    DB &21,&08,&78,&41,&04
+    DB &10,&43,&C2,&10,&84
+    DB &27,&08,&EA,&90,&84
+    DB &20,&00,&00,&00,&00
+    DB &32,&51,&C4,&23,&E0
+    DB &03,&82,&F8,&BE,&10
+    DB &F4,&63,&1F,&00,&0F
+    DB &84,&20,&F0,&85,&F1
+    DB &8C,&5E,&00,&3A,&3F
+    DB &83,&CC,&94,&79,&08
+    DB &40,&00,&F8,&C5,&E1
+    DB &84,&3D,&18,&C6,&24
+    DB &01,&08,&42,&08,&80
+    DB &21,&08,&42,&42,&11
+    DB &97,&25,&12,&10,&84
+    DB &21,&0C,&00,&6A,&B5
+    DB &AD,&40,&0F,&46,&31
+    DB &88,&00,&E8,&C6,&2E
+    DB &00,&3D,&18,&FA,&00
+    DB &03,&E3,&17,&84,&00
+    DB &B6,&61,&08,&00,&0F
+    DB &83,&83,&E2,&11,&E4
+    DB &21,&06,&00,&46,&31
+    DB &8B,&C0,&08,&C6,&2A
+    DB &20,&01,&18,&C6,&AA
+    DB &00,&22,&A2,&2A,&20
+    DB &04,&63,&17,&84,&00
+    DB &F8,&88,&8F,&88,&84
+    DB &41,&08,&22,&10,&84
+    DB &21,&08,&82,&10,&44
+    DB &22,&0A,&A0,&00,&00
+    DB &07,&82,&D4,&B4,&3E
+    DB &00,&00,&0F,&7B,&C0
+    DB &F7,&BC,&00,&00,&C8
+    DB &74,&7F,&07,&80
 
 ;    DB "AW,BG"
 
 ;          DS 0FFFFH-$,0
 
 
-           SEND COMPUTER1
-           END 8000H     ;dummy value
+;          SEND COMPUTER1
+;          END &8000     ;dummy value
