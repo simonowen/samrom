@@ -1,0 +1,328 @@
+;LOOKVAR.SAM
+;ENTRY: A VARIABLE (STARTS WITH A LETTER) IS EXPECTED AT (CHAD)
+;(HL)/A=FIRST LETTER
+;ACTION: LOOK IN VARIABLES AREA FOR IT
+;EXIT:  Z IF VAR NOT FOUND: C=TYPE/LEN BYTE; BITS 4-0=NAME LENGTH, EXCLUDING
+;       FIRST CHARACTER. BIT 5 IS SET FOR NUMERIC ARRAYS.
+;       STRINGS: HL PTS TO FF TERMINATOR OF STRING/ARRAY VARS
+;       NUMBERS: HL PTS TO MSB OF PTR (FF) THAT TERMINATES LIST FOR LETTER.
+
+;       NZ IF FOUND. HL POINTS TO VALUE IN VARS. (FOR NUMS, FIRST OF 5 BYTES,
+;       FOR STRINGS, LEN IN PAGES, FOLLOWED BY LEN MOD 16K AND TEXT)
+;       C=TYPE/LEN BYTE FROM VARS. NUMS: BIT 6 SET=FOR-NEXT
+;                        STRINGS/ARRAYS: BIT 6 SET=STR ARRY, BIT 5 SET=NUM ARRY
+;
+;ALWAYS: BIT 6,(FLAGS) IS SET FOR NUMERICS, RES FOR STRINGS
+;        NAME IS IN BUFFER AT "FIRLET" (FIRST LETTER IS CODED TABLE OFFSET)
+
+LOOKVARS:  RST &18
+
+;ENTRY FROM EVAL
+
+LKVARS2:   CALL NAMTOBUF     ;MOVE PAST NAME, COPY TO BUFFER, GET C=TYPE/LEN
+                             ;HL=FLAGS, A=NAME TERMINATOR ($/(/OTHER)
+           LD (CHAD),DE      ;PT PAST NAME (AND ANY (/$) IN BASIC LINE
+           LD A,C
+           AND &60
+           JP NZ,STARYLK     ;JP IF AN ARRAY
+
+           LD A,(HL)         ;FLAGS
+           ADD A,A
+           JP P,STARYLK      ;JP IF STRING
+
+           LD A,C
+           LD (TLBYTE),A
+           RET NC            ;RET IF SYNTAX TIME. NZ="FOUND" (BIT 7=1 FOR MINUS)
+
+;LOOK FOR A NUMERIC VARIABLE ROUTINE
+
+;NVARS PTS TO A TABLE OF WORD PTRS. IF THE MSB OF THE PTR IS 0FFH, THERE
+; ARE NO MORE VARS STARTING WITH THAT LETTER. (SO TO CLEAR NUM VARS, INIT
+; TABLE WITH FFs.) IF PTR MSB<>FF THEN ADD PTR TO GET ADDR. OF
+; TYPE/LENGTH BYTE FOR NEXT VAR. NOTE: THERE MAY BE NO SECOND LETTER.
+; TYPE | PTR LSB | PTR MSB | SECOND LET | .. | LAST LET | VALUE
+; TYPE/LEN BYTE HAS BIT 7 SET FOR HIDDEN, BIT 6="FOR" VAR
+; BITS 4-0=LEN-1. (0 FOR 1-LETTER VAR NAME, 31 FOR 32 LETTER MAX)
+
+;ENTRY:  NAME IS IN BUFFER STARTING AT "FIRLET", LETTERS UPPER CASE, NO SPACES
+;        C=DESIRED TYPE/LEN BYTE
+;EXIT:   Z IF VAR NOT FOUND, C=TYPE/LEN BYTE.
+;        HL PTS TO LSB OF PTR (FFFF) THAT TERMINATES LIST FOR LETTER.
+
+;        NZ IF FOUND. HL POINTS TO VALUE IN VARS, IX-1 PTS TO TYPE BYTE,
+;        C=TYPE/LEN FROM VARS, DE=PTR ADDED TO PREV VAR. PTR MSB ADDR TO
+;        PT TO THIS VAR"S T/L BYTE
+
+NUMLOOK:   LD A,(FIRLET)
+           SUB &61
+           ADD A,A
+           LD E,A            ;LETTER TRANSFORMED TO WORD OFFSET (A=0, B=2..)
+           LD D,0
+           CALL ADDRNV       ;PT. HL AT NUMERIC VARS, PAGED IN
+           ADD HL,DE         ;INDEX INTO TABLE OF WORD PTRS.
+           DB &FE            ;"JR+1"
+
+NVMOLP:    POP HL
+
+NVMLP:     LD A,C            ;DESIRED TYPE/LEN
+           LD E,(HL)
+           INC HL            ;PTR=FFFFH IF NO MORE VARS START WITH REQUIRED
+           LD D,(HL)         ; LETTER. CAUSES CARRY AND CHECK FOR FF IN NVSPOV
+           ADD HL,DE         ;ELSE DE IS A PTR TO NEXT VAR STARTING
+                             ; WITH REQUIRED LETTER.
+           JR C,NVSPOV       ;JR IF SEVERE PAGE OVERFLOW
+
+           BIT 6,H
+           JR NZ,NVSINCP     ;KEEP IN 8000-BFFF REGION
+
+NVSIEN:    XOR (HL)
+           AND &BF           ;IS IT DESIRED TYPE/NAME LENGTH? IGNORE BIT 6
+                             ;MISMATCH ("FOR" FLAG)
+           INC HL            ;PT TO PTR LSB
+           JR NZ,NVMLP       ;LOOP TIME=84Ts
+
+           LD A,C
+           AND &1F           ;ISOLATE NAME LENGTH
+           PUSH HL           ;SAVE PTR TO PTR LSB IN CASE MATCH FAILS
+           INC HL            ;
+           INC HL            ;SKIP PTR BYTES.
+                             ;HL=PTR TO NAME 2ND. LETTER IN VARS AREA.
+           JR Z,NVSFND       ;JR IF SINGLE LETTER VAR - ALREADY MATCHED.
+
+           LD B,A
+           LD IX,FIRLET+1    ;PT TO SECOND LETTER
+
+NVMTCHLP:  LD A,(IX+0)
+           CP (HL)
+           JR NZ,NVMOLP      ;EXIT IF MATCH FAILS
+
+           INC IX
+           INC HL
+           DJNZ NVMTCHLP     ;LOOP TILL WHOLE NAME MATCHES. HL PTS TO VALUE.
+
+NVSFND:    POP IX            ;PTR TO PTR LSB
+           LD C,(IX-1)       ;C=TYPE/LEN FROM VARS
+
+NZST:      INC A             ;NZ STATUS
+           RET               ;PREV. VAR PTR MSB IS AT IX-DE-1
+
+
+;PAGE OVERFLOW - MIGHT BE DUE TO LOTS OF VARS, OR PTR MSB=FF (TERMINATOR)
+
+NVSPOV:    INC D
+           RET Z             ;NOT FOUND - Z. HL HAS MOVED BACK BY 1 TO PTR LSB
+
+           CALL PGOVERF
+           CP A              ;Z
+
+NVSINCP:   CALL NZ,INCURPAGE
+
+           LD A,C
+           JR NVSIEN
+
+;FROM PARPRO
+;ENTRY: HL POINTS TO NAME ON BSTK, A=T/L BYTE.
+
+LKBSV:     LD DE,FIRLET
+           LD B,A
+           AND &0F
+           LD C,A
+           LD A,B
+           LD B,0            ;BC=NAME LEN
+           LDIR              ;COPY STORED NAME FROM BSTK TO FIRLET BUFFER
+           LD (BSTKEND),HL
+           AND &6F           ;MASK BIT THAT SHOWS IF A GLOBAL VERSION WAS HIDDEN
+                             ;(7) - LOOK FOR "VISIBLE" FORM USED LOCALLY
+                             ;ALSO FORCE BIT 4 LOW
+           JR STARYLK2     ;A=DESIRED T/L BYTE
+
+;LOOK FOR A STRING OR ARRAY
+
+;ENTRY:  NAME IS IN BUFFER AT "FIRLET"
+;        C=TYPE/LEN BYTE. BIT 5 SET IF NUMERIC ARRAY, BIT 6 SET IF STRING ARRAY
+;        OR SLICED STRING. (IF BIT 6 AND BIT 5=0, SIMPLE STRING NAME)
+;EXIT:   Z IF VAR NOT FOUND. C=ORIG TYPE/LEN BYTE, STRLOCN/HL" PT TO STOPPER.
+;       NZ IF FOUND. HL POINTS TO LEN IN PAGES, C/(DE)=TYPE/LEN IN VARS,
+;       STRLOCN=TYPE/LEN IN VARS
+;VARS AREA HOLDS TYPE/LEN BYTE, FIRST LET,..LAST LET, PADDED TO 10 CHARS,
+;LEN IN PAGES, LEN MOD 16K, TEXT. REPEATED UNTIL FF STOPPER
+;TYPE/LEN BIT 7=HIDDEN, 6=STRING ARRAY, 5=NUMERIC ARRAY (6 AND 5 LOW=SIMPLE $)
+;USES ALL REGS
+
+STARYLK:   INC C
+           LD A,C
+           LD (TLBYTE),A
+           AND &1F           ;ISOLATE NAME LEN
+           CP 11
+           JP NC,INVVARNM    ;ERROR IF STRING/ARRAY NAME LONGER THAN 10 CHARS
+                             ;EXCLUDING $ OR (
+           LD A,(HL)
+           RLA
+           JR NC,NZST        ;IF SYNTAX TIME, SET NZ ("FOUND") (A REG COULD NOT
+                             ;HAVE HELD FFH)
+           LD A,C
+
+;CALLED BY PROCESS PARAMS
+
+STARYLK2:  EXX
+           LD C,A            ;C"=DESIRED TYPE/LEN (LEN NOW TRUE NAME LEN)
+           LD B,&1F          ;B"="LEN" MASK
+           LD E,&BF          ;E"=MASK TO FORCE BIT 6 LOW
+           EXX
+
+           CALL ADDRSAV      ;PT HL AT STR/ARRAY VARS, SWITCHED IN.
+           IN A,(251)        ;START WITH CURRENT PORT VALUE
+
+LKSTRLP:   LD DE,FIRLET      ;PT TO START OF STORED NAME.
+           OUT (251),A       ;NO EFFECT ON FIRST PASS, AND MANY OTHERS
+           LD (STRLOCN),HL   ;SAVE START OF CURRENT STRING/ARRAY
+           LD A,(HL)         ;GET TYPE (BITS 7-5) AND NAME LEN (BITS 4-0)
+           EXX
+
+           LD H,A            ;SAVE DATA FROM VARS BRIEFLY
+           XOR C             ;XOR WITH DESIRED
+           AND E             ;AND RESULT WITH BFH.
+                             ;(SEE IF TYPE/LEN FROM VARS=DESIRED T/L IN C".
+                             ;IGNORE BIT 6 MISMATCH (SIMPLE VS. ARRAY STRINGS)
+           JR NZ,TLNOMTCH
+
+           LD A,H
+           AND B             ;B"=1FH. ISOLATE NAME LEN. (SAME FOR DESIRED
+           EXX               ;AND CANDIDATE NAME)
+
+           LD B,A
+           INC HL
+           LD A,(DE)         ;FIRLET
+           CP (HL)           ;DO A QUICK CHECK ON FIRST LETTER.
+           JR NZ,FLNOMTCH    ;JR IF FAIL
+                             ;ELSE CHECK ENTIRE NAME
+           JR DCNMLN         ;B=1-10
+
+STMTCHLP:  INC HL
+           INC DE
+           LD A,(DE)
+           CP (HL)
+           JR NZ,FLNOMTCH
+
+DCNMLN:    DJNZ STMTCHLP
+
+           LD HL,(STRLOCN)
+           LD C,(HL)         ;T/L BYTE FROM VARS
+           EX DE,HL
+           LD HL,12
+           DEC L             ;NZ
+           ADD HL,DE         ;HL PTS TO LEN IN PAGES, DE PTS TO T/L BYTE
+           RET
+
+TLNOMTCH:  INC H             ;TEST FOR FF STOPPER
+           RET Z             ;RET IF IT IS. Z SHOWS NOT FOUND, C=DESIRED T/L
+
+           EXX
+
+FLNOMTCH:  LD HL,(STRLOCN)
+           LD BC,11
+           ADD HL,BC         ;SKIP NAME, PT TO LEN IN PAGES
+           IN A,(251)
+           ADD A,(HL)        ;ADD PAGES OF STRING/ARRAY LENGTH
+           INC HL
+           LD C,(HL)
+           INC HL
+           LD B,(HL)
+           INC HL            ;PTS TO TEXT
+           ADD HL,BC         ;BC (0-3FFF) ADDED TO PT HL TO NEXT T/L BYTE
+           JR C,LKSTRPO      ;DEAL WITH RARE CASE OF STRLOC NEAR PAGE C END, BC
+                             ;NEAR 16K
+           BIT 6,H
+           JR Z,LKSTRLP      ;JR IF HL STILL IN 8000-BFFF REGION
+
+           RES 6,H           ;=SUB 4000H
+
+LKSI:      INC A             ;INC PAGE TO COMPENSATE
+           JR LKSTRLP
+
+LKSTRPO:   INC A             ;OVERFLOWED INTO 0000-3FFF - CORRECT BY 2 PAGES
+           SET 7,H           ;8000-BFFF AGAIN
+           JR LKSI
+
+;NAME TO BUFFER
+;ALTERS HL, DE, BC, A
+;ENTRY: HL PTS TO A CHAR, ALSO HELD IN A
+;EXIT:  DE POINTS TO CHAR PAST NAME
+;       NAME, COMPRISING ALPHANUMERICS OR UNDERLINE CHARS, COPIED TO BASE PAGE
+;       BUFFER AT "FIRLET", WITH SPACES REMOVED AND LOWER CASE FORCED.
+;       HL=FLAGS ADDR
+;       C BITS 4-0=NAME LEN, EXCLUDING FIRST CHAR. (0-31)
+;       BIT 6,C SET IF STRING ARRAY OR SLICED STRING
+;       BIT 5,C SET IF NUMERIC ARRAY
+;       BIT 6,(FLAGS) SET IF NUMERIC, RES IF STRING
+
+NAMTOBUF:  LD B,32           ;MAX LEN+1 FOR A NAME (EXCLUDING 1ST CHAR)
+           LD DE,FIRLET      ;PT TO NAME BUFFER IN COMMON MEMORY
+           CALL GETALPH
+           OR &20
+           LD (DE),A         ;FIRST LETTER STORED
+
+NMTBL:     INC HL
+           LD A,(HL)
+           CP &20
+           JR Z,NMTBL        ;SKIP SPACES
+
+           CALL ALPHANUM     ;SEE IF LETTER, NUMBER OR UNDERLINE
+           JR C,NMTB2        ;JR IF ALPANUMERIC
+
+           CP "_"
+           JR NZ,NAMEND
+
+           JR NMTB3
+
+NMTB2:     OR &20            ;FORCE LOWER CASE (NUMS UNAFFECTED)
+
+NMTB3:     INC DE
+           LD (DE),A
+           DJNZ NMTBL        ;LOOP TILL LENGTH ILLEGAL
+
+           LD (CHAD),HL      ;(FOR XPTR)
+
+INVVARNM:  RST &08
+           DB 40             ;"Invalid variable name" - USUALLY SPOTTED IN
+                             ;SYNTAX CHECK
+
+;NAME PROPER HAS NOW ENDED, BUT TYPE CHARACTER MAY FOLLOW
+
+NAMEND:    EX DE,HL
+           LD HL,FLAGS
+           LD A,32
+           SUB B
+           LD C,A            ;C=NAME LENGTH-1, RANGE 0-31.
+           LD A,(DE)
+           CP "$"
+           JR NZ,NMEN2       ;JR IF NUMERIC VAR
+
+           RES 6,(HL)        ;"STRING"
+           INC DE
+           LD A,(DE)
+           CP "("
+           RET NZ
+
+           INC DE
+           SET 6,C           ;"STRING ARRAY"
+           RET
+
+NMEN2:     SET 6,(HL)        ;"NUMERIC"
+           CP "("
+           RET NZ
+
+           INC DE
+           SET 5,C           ;"NUMERIC ARRAY"
+           RET
+
+           LD A,32
+           SUB B
+           LD C,A            ;C=NAME LENGTH-1, RANGE 0-31.
+           RET
+
+LVFLAGS:   CALL LOOKVARS
+           EX AF,AF'         ;Z IF NOT FOUND
+           LD A,(FLAGS)
+           ADD A,A
+           RET               ;M IF NUM, P IF $, CY IF RUNNING
