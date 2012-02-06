@@ -1,6 +1,6 @@
-; Test to compares assembled ROM image with live ROM
+; Test program to compare assembled ROM with live ROM
 ;
-; NOTE: to simplify the comparison the assembled image is partially overwritten
+; NOTE: to simplify the comparison the assembled image is partly overwritten
 
         org &7000
         dump $
@@ -106,3 +106,5 @@ prleft: rst 16
         add a,"A"-"0"-10
 prright:rst 16
         ret
+
+include "samrom.asm"

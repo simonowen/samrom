@@ -1,3 +1,4 @@
-.*
-!.gitignore
-*.dsk
+samrom.bin
+samrom.sym
+romtest.dsk
+romtest.sym
